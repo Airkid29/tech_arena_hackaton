@@ -1,0 +1,6 @@
+{
+  "name": "VIGILO — Cybersécurité & Vigilance Humaine",
+  "description": "Plateforme SaaS B2B pour PME : Simuler des cyberattaques contrôlées sur Email et WhatsApp, mesurer les comportements, analyser avec Vigilo Coach, former et re-tester.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
