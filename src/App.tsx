@@ -345,7 +345,7 @@ export default function App() {
   // 2. APP VIEW MODE (Full-featured Console & Resilience Engine)
   return (
     <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white transition-colors ${
-      isDark ? 'dark bg-[#070b13] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
+      isDark ? 'dark bg-[var(--background)] text-[var(--foreground)]' : 'bg-[var(--background)] text-[var(--foreground)]'
     }`}>
       {/* Top Header */}
       <Navbar

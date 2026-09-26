@@ -30,7 +30,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   language,
   theme,
 }) => {
-  const isDark = theme === 'dark';
   const t = translations[language];
 
   const navItems = [
@@ -56,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'ai-coach',
       label: t.nav.coach,
       icon: Sparkles,
-      badge: null,
+      badge: 'Gemini 2.5',
     },
     {
       id: 'training',
@@ -85,9 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className={`w-64 border-r transition-colors flex flex-col justify-between shrink-0 select-none ${
-      isDark ? 'border-slate-800 bg-[#080c15] text-slate-200' : 'border-slate-200 bg-white text-slate-800'
-    }`}>
+    <aside className="w-64 border-r border-white/10 bg-[#080b11] text-slate-200 flex flex-col justify-between shrink-0 select-none transition-all">
       <div className="p-4 space-y-6">
         {/* Navigation list */}
         <nav className="space-y-1">
@@ -98,34 +95,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                   isActive
-                    ? isDark
-                      ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30'
-                      : 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold'
-                    : isDark
-                      ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-[#f2620a]/15 text-white border border-[#f2620a]/40 shadow-[0_0_15px_rgba(242,98,10,0.15)] font-semibold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
                 }`}
               >
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
                   <Icon
                     className={`w-4 h-4 ${
-                      isActive
-                        ? isDark ? 'text-blue-400' : 'text-blue-600'
-                        : 'text-slate-400'
+                      isActive ? 'text-[#fb923c]' : 'text-slate-400'
                     }`}
                   />
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                      item.badge === 'Nouveau' || item.badge === 'New'
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        : isDark
-                          ? 'bg-blue-950 text-blue-300 border border-blue-800/50'
-                          : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                      item.badge === 'Nouveau' || item.badge === 'New' || item.badge === 'Gemini 2.5'
+                        ? 'bg-[#f2620a]/20 text-[#fb923c] border border-[#f2620a]/30'
+                        : 'bg-white/10 text-slate-300 border border-white/10'
                     }`}
                   >
                     {item.badge}
@@ -136,29 +125,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        {/* Continuous resilience formula */}
-        <div className={`p-3 rounded-lg border text-xs space-y-1.5 ${
-          isDark ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
-        }`}>
-          <div className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-300">
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-            <span>Cycle VIGILO</span>
+        {/* Continuous resilience formula box */}
+        <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-md text-xs space-y-2">
+          <div className="flex items-center gap-2 font-semibold text-white">
+            <ShieldCheck className="w-4 h-4 text-[#fb923c]" />
+            <span>Cycle Continu VIGILO</span>
           </div>
-          <p className="text-[11px] leading-relaxed">
+          <p className="text-[11px] leading-relaxed text-slate-400 font-mono">
             {t.sloganShort}
           </p>
         </div>
       </div>
 
       {/* Footer link to landing */}
-      <div className={`p-4 border-t ${isDark ? 'border-slate-800/80' : 'border-slate-200'}`}>
+      <div className="p-4 border-t border-white/10">
         <button
           onClick={onGoToLanding}
-          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
-            isDark ? 'border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-          }`}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-medium transition-all cursor-pointer"
         >
-          <LayoutTemplate className="w-3.5 h-3.5 text-blue-500" />
+          <LayoutTemplate className="w-4 h-4 text-[#fb923c]" />
           <span>{t.nav.landing}</span>
         </button>
       </div>

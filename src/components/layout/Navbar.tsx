@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Building2, Eye, LayoutTemplate, Sun, Moon } from 'lucide-react';
+import { Shield, Building2, Eye, LayoutTemplate, Sun, Moon, Sparkles, Terminal } from 'lucide-react';
 import { SimulationProviderSettings } from '../../types';
 import { Language, translations } from '../../i18n/translations';
 
@@ -28,47 +28,41 @@ export const Navbar: React.FC<NavbarProps> = ({
   const t = translations[language];
 
   return (
-    <header className={`sticky top-0 z-30 h-16 border-b transition-colors px-6 flex items-center justify-between ${
-      isDark ? 'border-slate-800 bg-[#090d16]/95 text-slate-100' : 'border-slate-200 bg-white/95 text-slate-900 shadow-xs'
-    }`}>
+    <header className="sticky top-0 z-30 h-16 border-b border-[var(--card-border)] backdrop-blur-xl bg-[var(--background)]/90 px-6 flex items-center justify-between transition-all">
+      {/* Brand */}
       <div className="flex items-center gap-4">
         <div
           onClick={onGoToLanding}
           className="flex items-center gap-3 cursor-pointer group"
           title="Retour à la présentation VIGILO"
         >
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
-            <Shield className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-xl bg-[var(--primary)] flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
+            <Shield className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className={`font-bold text-base tracking-tight font-mono ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <span className="font-extrabold text-base tracking-tight font-mono">
                 VIGILO
               </span>
-              <span className={`text-[10px] uppercase font-mono px-1.5 py-0.5 rounded border ${
-                isDark ? 'bg-blue-950/60 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-700'
-              }`}>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium vigilo-pill-orange">
                 Console PME
               </span>
             </div>
-            <p className="text-xs text-slate-500 hidden sm:block">
-              {t.brandTagline}
+            <p className="text-[11px] text-slate-400 hidden sm:block font-mono">
+              Vigilance & Cyber Risk SaaS
             </p>
           </div>
         </div>
       </div>
 
+      {/* Right Controls */}
       <div className="flex items-center gap-3">
         {/* Language switcher */}
-        <div className={`flex items-center p-0.5 rounded-lg border text-xs font-mono ${
-          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-slate-100'
-        }`}>
+        <div className="flex items-center p-0.5 rounded-lg border border-white/10 bg-white/5 text-xs font-mono">
           <button
             onClick={() => onToggleLanguage('fr')}
             className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-              language === 'fr'
-                ? isDark ? 'bg-blue-600 text-white font-bold' : 'bg-white text-blue-700 font-bold shadow-xs'
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              language === 'fr' ? 'bg-[var(--primary)] text-white font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
             FR
@@ -76,9 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => onToggleLanguage('en')}
             className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-              language === 'en'
-                ? isDark ? 'bg-blue-600 text-white font-bold' : 'bg-white text-blue-700 font-bold shadow-xs'
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              language === 'en' ? 'bg-[var(--primary)] text-white font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
             EN
@@ -88,33 +80,27 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Theme Toggle */}
         <button
           onClick={onToggleTheme}
-          className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-            isDark ? 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white' : 'border-slate-200 bg-slate-100 text-slate-700 hover:text-slate-900'
-          }`}
+          className="p-2 rounded-lg border border-white/10 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           title={t.nav.switchTheme}
         >
-          {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-700" />}
+          {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-300" />}
         </button>
 
         {/* Landing Page button */}
         <button
           onClick={onGoToLanding}
-          className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
-            isDark ? 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-xs'
-          }`}
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-medium transition-all cursor-pointer"
           title="Afficher la page de présentation"
         >
-          <LayoutTemplate className="w-3.5 h-3.5 text-blue-500" />
+          <LayoutTemplate className="w-3.5 h-3.5 text-[#fb923c]" />
           <span>{t.nav.landing}</span>
         </button>
 
         {/* Simulation Provider indicator */}
-        <div className={`hidden md:flex items-center gap-2 text-xs border rounded-md px-2.5 py-1.5 ${
-          isDark ? 'border-slate-800 bg-slate-900 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
-        }`}>
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Moteur :</span>
-          <strong className={isDark ? 'text-slate-200' : 'text-slate-800'}>
+        <div className="hidden md:flex items-center gap-2 text-xs border border-white/10 bg-white/5 rounded-lg px-3 py-1.5 text-slate-300 font-mono">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-slate-400">Moteur:</span>
+          <strong className="text-white">
             {settings.provider === 'mock' ? 'Mock Engine' : 'Gophish API'}
           </strong>
         </div>
@@ -122,8 +108,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Employee Simulation Trigger */}
         <button
           onClick={onOpenEmployeeSimulator}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-all shadow-xs cursor-pointer"
-          title="Tester le rendu de l'email / WhatsApp et les réflexes collaborateurs"
+          className="vigilo-btn-orange flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer shadow-sm"
+          title="Tester le rendu de l'email / WhatsApp"
         >
           <Eye className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">{t.nav.liveTest}</span>
@@ -131,11 +117,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         {/* User Role */}
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800 text-xs">
-          <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-300">
+        <div className="flex items-center gap-2 pl-2 border-l border-white/10 text-xs font-mono">
+          <div className="w-7 h-7 rounded-full bg-[#f2620a]/20 border border-[#f2620a]/40 flex items-center justify-center font-bold text-xs text-[#fb923c]">
             IT
           </div>
-          <span className="hidden lg:inline font-medium text-slate-700 dark:text-slate-300">
+          <span className="hidden lg:inline font-medium text-slate-300">
             {t.nav.adminRole}
           </span>
         </div>

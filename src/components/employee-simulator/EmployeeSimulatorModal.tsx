@@ -99,368 +99,175 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
 
   const handleLaunchTargetTraining = () => {
     onClose();
-    // Guarantee that if user was on WhatsApp or Whishing, we route strictly to the WhatsApp Whishing module
-    if (channel === 'whatsapp' || currentCategory === 'WhatsApp Phishing') {
-      onStartTrainingFromTrap('train-whatsapp-whishing');
-    } else {
-      const targetCategory = scenario?.category || campaign?.category || 'Phishing';
-      onStartTrainingFromTrap(targetCategory);
-    }
+    onStartTrainingFromTrap(currentCategory);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
-      <div
-        className={`w-full max-w-4xl border rounded-2xl shadow-2xl overflow-hidden my-4 flex flex-col max-h-[92vh] transition-colors ${
-          isDark
-            ? 'bg-[#0b0f17] border-slate-700 text-white'
-            : 'bg-white border-slate-300 text-slate-900'
-        }`}
-      >
-        {/* TOP CONTROL BAR: Channel Switcher & Mode indicators */}
-        <div
-          className={`px-4 sm:px-5 py-3 border-b flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 ${
-            isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <strong className={isDark ? 'text-white' : 'text-slate-900'}>
-              Simulateur Collaborateur VIGILO
-            </strong>
-            <span className="text-slate-400 hidden sm:inline">·</span>
-            <span className={`truncate max-w-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              {currentScenarioName}
-            </span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className="relative w-full max-w-4xl max-h-[92vh] rounded-2xl border border-white/15 bg-[#080b11] text-slate-100 shadow-2xl flex flex-col overflow-hidden">
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-white/10 bg-slate-900/90 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#f2620a]/20 border border-[#f2620a]/40 text-[#fb923c] flex items-center justify-center font-bold text-xs">
+              LIVE
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-sm">Aperçu Collaborateur — {currentScenarioName}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Mode Simulation
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 font-mono">
+                Test de la réaction réelle du collaborateur sous pression
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Multi-channel selector: Email vs WhatsApp */}
-            <div
-              className={`flex items-center p-0.5 rounded-lg border text-xs ${
-                isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-slate-200 shadow-xs'
-              }`}
-            >
+          {/* Channel selector */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center p-1 rounded-xl bg-white/5 border border-white/10 text-xs font-mono">
               <button
                 onClick={() => {
                   setChannel('email');
                   setViewState('inbox');
                 }}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
-                  channel === 'email'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  channel === 'email' ? 'bg-[#f2620a] text-white font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Mail className="w-3.5 h-3.5" />
-                <span>Email Pro</span>
+                <span>Email (M365)</span>
               </button>
               <button
                 onClick={() => {
                   setChannel('whatsapp');
                   setViewState('inbox');
                 }}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
-                  channel === 'whatsapp'
-                    ? 'bg-[#25D366] text-[#111B21] shadow-xs'
-                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  channel === 'whatsapp' ? 'bg-[#f2620a] text-white font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span>WhatsApp Pro</span>
+                <span>WhatsApp</span>
               </button>
             </div>
 
-            {viewState !== 'inbox' && (
-              <button
-                onClick={() => setViewState('inbox')}
-                className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer ${
-                  isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Revoir le message
-              </button>
-            )}
-
             <button
               onClick={onClose}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-              }`}
-              title="Fermer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* VIEW 1: INBOX / SIMULATOR VIEW */}
-        {viewState === 'inbox' && (
-          <>
-            {channel === 'whatsapp' ? (
-              <WhatsAppSimulator
-                scenario={scenario}
-                onClickedTrap={handleSimulateClickTrap}
-                onReportedPhish={handleSimulateReport}
-                isDark={isDark}
-              />
-            ) : (
-              <div className="flex-1 flex flex-col overflow-y-auto">
-                {/* Outlook Web Webmail Header */}
-                <div
-                  className={`px-6 py-4 border-b flex items-center justify-between ${
-                    isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                      MS
-                    </div>
+        {/* Modal Body */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-[#05070c]">
+          {viewState === 'inbox' && (
+            <div className="space-y-6">
+              {channel === 'email' ? (
+                /* Email View */
+                <div className="p-6 rounded-2xl border border-white/10 bg-slate-900 shadow-xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-4 text-xs font-mono text-slate-400">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                          {currentSenderName}
-                        </span>
-                        <span className="text-[11px] px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                          Externe
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-500 flex items-center gap-2">
-                        <span>De : {currentSenderEmail}</span>
-                        <span>·</span>
-                        <span>À : vous &lt;employe@votre-entreprise.fr&gt;</span>
-                      </div>
+                      <div><strong className="text-white">De :</strong> {currentSenderName} &lt;{currentSenderEmail}&gt;</div>
+                      <div className="mt-1"><strong className="text-white">Objet :</strong> {currentSubject}</div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
+                    {/* Report button */}
                     <button
                       onClick={handleSimulateReport}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
-                      title="Signaler à VIGILO"
+                      className="vigilo-btn-secondary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 text-emerald-400 border-emerald-500/30 cursor-pointer"
                     >
                       <ShieldCheck className="w-4 h-4" />
-                      <span>Signaler à VIGILO</span>
+                      <span>Signaler l'attaque</span>
                     </button>
                   </div>
-                </div>
 
-                {/* Subject Line */}
-                <div
-                  className={`px-6 py-3 border-b text-sm font-semibold ${
-                    isDark ? 'bg-[#1e293b]/50 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                  }`}
-                >
-                  Objet : {currentSubject}
-                </div>
-
-                {/* Email Body with trap click handler */}
-                <div className="p-6 flex-1 bg-white text-slate-900 overflow-y-auto">
+                  {/* Body preview */}
                   <div
-                    className="prose prose-sm max-w-none text-slate-800"
-                    onClick={(e) => {
-                      const target = e.target as HTMLElement;
-                      if (target.tagName === 'A' || target.closest('a')) {
-                        handleSimulateClickTrap(e);
-                      }
-                    }}
+                    className="text-xs text-slate-200 leading-relaxed font-sans cursor-pointer p-4 bg-slate-950 rounded-xl border border-white/5"
+                    onClick={() => handleSimulateClickTrap()}
                     dangerouslySetInnerHTML={{ __html: currentBody }}
                   />
-
-                  {/* Interactive prompt to help tester */}
-                  <div className="mt-8 p-3 rounded-lg bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-900">
-                    <div className="flex items-center gap-2">
-                      <Info className="w-4 h-4 text-blue-600 shrink-0" />
-                      <span>
-                        <strong>Test de simulation :</strong> Cliquez sur le lien pour simuler un collaborateur piégé, ou sur <em>Signaler à VIGILO</em> pour tester le réflexe de défense.
-                      </span>
-                    </div>
-                    <button
-                      onClick={handleSimulateClickTrap}
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded text-[11px] font-medium hover:bg-blue-700 shrink-0 cursor-pointer self-start sm:self-auto"
-                    >
-                      Simuler le clic
-                    </button>
-                  </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* VIEW 2: EDUCATIONAL LANDING PAGE (When employee clicked the trap) */}
-        {viewState === 'landing_page_clicked' && (
-          <div
-            className={`flex-1 overflow-y-auto p-6 md:p-8 space-y-6 ${
-              isDark ? 'bg-[#090d16] text-white' : 'bg-slate-50 text-slate-900'
-            }`}
-          >
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-6 h-6 text-amber-500" />
-                </div>
-                <div>
-                  <span className="text-xs font-mono uppercase text-amber-500 tracking-wider font-semibold">
-                    Exercice de sensibilisation VIGILO · {channel === 'whatsapp' ? 'Vecteur WhatsApp (Whishing & Fraude au Président)' : 'Vecteur Email Pro'}
-                  </span>
-                  <h2 className={`text-xl font-bold mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    Oups ! Ceci était une simulation de cyberattaque contrôlée.
-                  </h2>
-                </div>
-              </div>
-
-              <div
-                className={`p-5 rounded-xl border space-y-3 text-xs leading-relaxed ${
-                  isDark ? 'bg-[#0f172a] border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
-                }`}
-              >
-                <p>
-                  <strong>Rassurez-vous :</strong> Vos mots de passe, compte WhatsApp et données professionnelles ne sont absolument pas compromis. Cet exercice a été programmé par votre entreprise pour vous aider à déceler les pièges réels du quotidien.
-                </p>
-                <p>
-                  {channel === 'whatsapp' ? (
-                    <span>
-                      Dans une cyberattaque réelle par <strong>WhatsApp Phishing (Whishing & Fraude au Président)</strong>, l'attaquant contourne les passerelles de messagerie de l'entreprise pour vous inciter par urgence psychologique et intimidation à valider un faux virement, installer un malware ou livrer des identifiants confidentiels.
-                    </span>
-                  ) : (
-                    <span>
-                      Dans une attaque réelle par courriel, le lien sur lequel vous venez de cliquer aurait pu voler vos identifiants de session d'entreprise ou télécharger un rançongiciel sur le réseau.
-                    </span>
-                  )}
-                </p>
-              </div>
-
-              {/* Red flags in this specific lure */}
-              <div className="space-y-3 text-xs">
-                <h4 className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                  {channel === 'whatsapp'
-                    ? 'Les 4 signaux d\'alerte caractéristiques de cette tentative WhatsApp :'
-                    : 'Les 3 indices qui auraient dû vous alerter dans ce courriel :'}
-                </h4>
-                <div className="space-y-2">
-                  {activeRedFlags.map((flag, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-lg border flex items-center gap-3 ${
-                        isDark ? 'border-red-900/40 bg-red-950/20 text-slate-200' : 'border-red-200 bg-red-50 text-slate-800'
-                      }`}
-                    >
-                      <span className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center font-mono text-[10px] shrink-0 font-bold">
-                        {idx + 1}
-                      </span>
-                      <span className="font-medium">{flag}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Golden rule for WhatsApp */}
-              {channel === 'whatsapp' && (
-                <div
-                  className={`p-4 rounded-xl border flex items-start gap-3 text-xs ${
-                    isDark ? 'border-emerald-900/50 bg-emerald-950/20 text-slate-300' : 'border-emerald-200 bg-emerald-50 text-slate-800'
-                  }`}
-                >
-                  <PhoneCall className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="text-emerald-600 dark:text-emerald-300">La règle d'or du contre-appel :</strong>
-                    <p className="mt-1 leading-relaxed">
-                      Dès qu'une demande inhabituelle (virement, bon de commande, mot de passe, validation express) arrive sur WhatsApp ou SMS, appelez toujours votre interlocuteur sur son <strong>numéro fixe officiel interne</strong> avant toute action.
-                    </p>
-                  </div>
-                </div>
+              ) : (
+                /* WhatsApp View */
+                <WhatsAppSimulator
+                  onClickedTrap={handleSimulateClickTrap}
+                  onReportedPhish={handleSimulateReport}
+                />
               )}
-
-              {/* Immediate CTA to micro-training */}
-              <div
-                className={`p-5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                  isDark ? 'border-blue-900/50 bg-blue-950/30' : 'border-blue-200 bg-blue-50'
-                }`}
-              >
-                <div className="space-y-1">
-                  <div className="text-blue-600 dark:text-blue-300 font-bold text-sm flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span>
-                      {channel === 'whatsapp'
-                        ? 'Micro-formation : WhatsApp Whishing & Fraude au Président (4 min)'
-                        : 'Micro-formation ciblée VIGILO (4 minutes)'}
-                    </span>
-                  </div>
-                  <p className={`text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                    Découvrez immédiatement les réflexes simples pour ne plus jamais tomber dans le piège.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleLaunchTargetTraining}
-                  className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md transition-all cursor-pointer self-start sm:self-auto shrink-0"
-                >
-                  Suivre la formation maintenant
-                </button>
-              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* VIEW 3: REPORTED SUCCESS (When employee reported the phish) */}
-        {viewState === 'reported_success' && (
-          <div
-            className={`flex-1 overflow-y-auto p-8 flex items-center justify-center ${
-              isDark ? 'bg-[#090d16] text-white' : 'bg-slate-50 text-slate-900'
-            }`}
-          >
-            <div className="max-w-lg mx-auto text-center space-y-5 animate-in zoom-in-95 duration-200">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-xl">
-                <ShieldCheck className="w-8 h-8" />
+          {viewState === 'landing_page_clicked' && (
+            /* Trap Clicked Awareness View */
+            <div className="p-8 rounded-2xl border border-rose-500/30 bg-rose-500/10 space-y-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center mx-auto">
+                <AlertTriangle className="w-8 h-8" />
               </div>
 
-              <div className="space-y-1">
-                <span className="text-xs font-mono uppercase text-emerald-600 dark:text-emerald-400 tracking-wider font-semibold">
-                  Excellent réflexe de sécurité !
-                </span>
-                <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Bravo ! Vous avez déjoué la tentative {channel === 'whatsapp' ? 'WhatsApp' : 'de phishing'}.
-                </h2>
-              </div>
-
-              <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                Ce message était un test contrôlé envoyé dans le cadre du programme de cyber-résilience de l'entreprise. En cliquant sur le bouton de signalement VIGILO, vous venez de protéger l'ensemble de votre organisation !
-              </p>
-
-              <div
-                className={`p-4 rounded-xl border text-xs text-left space-y-1 ${
-                  isDark ? 'bg-[#0f172a] border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
-                }`}
-              >
-                <div className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Statistiques de vigilance mises à jour</span>
-                </div>
-                <p className="text-slate-500">
-                  Votre signalement a été instantanément comptabilisé dans le tableau de bord cyber de l'entreprise.
+              <div className="space-y-2 max-w-xl mx-auto">
+                <h3 className="text-2xl font-extrabold text-white">Ceci était une simulation VIGILO</h3>
+                <p className="text-sm text-slate-300">
+                  Vous avez cliqué sur un lien ou accepté une demande suspecte. Pas de panique, il s'agissait d'un exercice de prévention non punitif !
                 </p>
               </div>
 
-              <div className="pt-2 flex justify-center gap-3">
-                <button
-                  onClick={() => setViewState('inbox')}
-                  className={`px-4 py-2 rounded-lg border text-xs cursor-pointer ${
-                    isDark ? 'border-slate-800 text-slate-300 hover:text-white' : 'border-slate-300 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Revoir le message
-                </button>
-                <button
-                  onClick={onClose}
-                  className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md cursor-pointer"
-                >
-                  Terminer la simulation
-                </button>
+              {/* Red Flags List */}
+              <div className="p-5 rounded-xl bg-slate-900 border border-white/10 text-left max-w-xl mx-auto space-y-2">
+                <h4 className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">
+                  Indices qu'il s'agissait d'un piège :
+                </h4>
+                <ul className="space-y-1.5 text-xs text-slate-300">
+                  {activeRedFlags.map((flag, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-rose-400 font-bold">•</span>
+                      <span>{flag}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
+
+              <button
+                onClick={handleLaunchTargetTraining}
+                className="vigilo-btn-orange px-6 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2 cursor-pointer"
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>Suivre le micro-module de 2 minutes</span>
+              </button>
             </div>
-          </div>
-        )}
+          )}
+
+          {viewState === 'reported_success' && (
+            /* Reported Success View */
+            <div className="p-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 space-y-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-2 max-w-xl mx-auto">
+                <h3 className="text-2xl font-extrabold text-white">Excellent réflexe de sécurité !</h3>
+                <p className="text-sm text-slate-300">
+                  Vous avez identifié et signalé l'attaque avec succès. Votre geste protège l'ensemble de l'entreprise.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900 border border-white/10 text-xs font-mono text-emerald-400 max-w-md mx-auto">
+                +15 Points de Vigilance Humaine attribués à votre cohorte !
+              </div>
+
+              <button
+                onClick={onClose}
+                className="vigilo-btn-secondary px-6 py-2.5 rounded-xl text-xs font-bold cursor-pointer"
+              >
+                Fermer le simulateur
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

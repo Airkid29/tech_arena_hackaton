@@ -4,26 +4,174 @@
 
 @layer base {
   :root {
-    color-scheme: light;
-  }
-  :root.dark {
     color-scheme: dark;
+    --background: #000000;
+    --foreground: #ededed;
+    --card: #0a0a0a;
+    --card-border: rgba(255, 255, 255, 0.1);
+    --primary: #f2620a;
+    --primary-hover: #d95809;
+    --muted: #171717;
+    --muted-foreground: #a1a1aa;
+    --accent: #171717;
   }
 
   body {
-    background-color: #f8fafc;
-    color: #0f172a;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.2s ease, color 0.2s ease;
+    overflow-x: hidden;
   }
 
-  .dark body,
-  html.dark body {
-    background-color: #0b0f17;
-    color: #f1f5f9;
+  /* Light mode is minimal */
+  html:not(.dark) body {
+    --background: #ffffff;
+    --foreground: #0a0a0a;
+    --card: #ffffff;
+    --card-border: rgba(0, 0, 0, 0.1);
+    --primary: #ea580c;
+    --primary-hover: #c2410c;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --accent: #f4f4f5;
   }
 }
 
-/* Custom sleek scrollbar for light & dark modes */
+/* Premium minimalist grid - Vercel/Linear style */
+.vigilo-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, black, transparent 80%);
+  -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
+}
+
+/* Very subtle glows instead of aggressive ones */
+.vigilo-orange-glow {
+  background: radial-gradient(circle, rgba(242, 98, 10, 0.08) 0%, transparent 60%);
+}
+
+.vigilo-cyan-glow {
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, transparent 60%);
+}
+
+/* Sophisticated Cards */
+.vigilo-card {
+  background-color: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vigilo-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.vigilo-card-interactive {
+  background-color: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vigilo-card-interactive:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Refined Buttons */
+.vigilo-btn-primary {
+  background-color: var(--foreground);
+  color: var(--background);
+  font-weight: 500;
+  border-radius: 8px;
+  transition: transform 0.1s ease, opacity 0.2s ease;
+}
+
+.vigilo-btn-primary:hover {
+  opacity: 0.9;
+  transform: scale(0.98);
+}
+
+.vigilo-btn-orange {
+  background-color: var(--primary);
+  color: #ffffff;
+  font-weight: 500;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(242, 98, 10, 0.2);
+  transition: all 0.2s ease;
+}
+
+.vigilo-btn-orange:hover {
+  background-color: var(--primary-hover);
+  box-shadow: 0 4px 15px rgba(242, 98, 10, 0.3);
+  transform: translateY(-1px);
+}
+
+.vigilo-btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--card-border);
+  color: var(--foreground);
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.vigilo-btn-secondary:hover {
+  background-color: var(--muted);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Pills / Badges */
+.vigilo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  background-color: var(--muted);
+  border: 1px solid var(--card-border);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.vigilo-pill-orange {
+  background-color: rgba(242, 98, 10, 0.1);
+  border: 1px solid rgba(242, 98, 10, 0.2);
+  color: var(--primary);
+}
+
+.vigilo-pill-emerald {
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.vigilo-pill-cyan {
+  background-color: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  color: #38bdf8;
+}
+
+/* Typography Enhancements */
+.vigilo-glow-text {
+  color: var(--foreground);
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.vigilo-orange-text-gradient {
+  color: var(--primary);
+}
+
+/* Custom sleek scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -32,16 +180,33 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--card-border);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s infinite ease-in-out;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
 }
