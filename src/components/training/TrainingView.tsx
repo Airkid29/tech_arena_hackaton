@@ -38,13 +38,13 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
 
   const categories = [
     { id: 'all', label: 'Toutes les formations' },
-    { id: 'WhatsApp Phishing', label: '💬 WhatsApp (Whishing)' },
-    { id: 'Phishing', label: '✉️ Phishing M365' },
-    { id: 'Fake Invoice', label: '📄 Fake Invoice (RIB)' },
-    { id: 'QR Code (Quishing)', label: '📱 Quishing (QR Code)' },
-    { id: 'MFA Fatigue', label: '🔔 MFA Fatigue' },
-    { id: 'Ransomware', label: '🔒 Ransomware & Macros' },
-    { id: 'Social Engineering', label: '👤 Social Engineering' },
+    { id: 'WhatsApp Phishing', label: 'WhatsApp (Whishing)' },
+    { id: 'Phishing', label: 'Phishing M365' },
+    { id: 'Fake Invoice', label: 'Fake Invoice (RIB)' },
+    { id: 'QR Code (Quishing)', label: 'Quishing (QR Code)' },
+    { id: 'MFA Fatigue', label: 'MFA Fatigue' },
+    { id: 'Ransomware', label: 'Ransomware & Macros' },
+    { id: 'Social Engineering', label: 'Social Engineering' },
   ];
 
   return (
@@ -84,11 +84,10 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
               key={c.id}
               type="button"
               onClick={() => setSelectedCategory(c.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
-                selectedCategory === c.id
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 border ${selectedCategory === c.id
                   ? 'bg-[var(--primary)]/15 text-[var(--primary)] border-[var(--primary)]/40 font-semibold'
                   : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] border-transparent hover:bg-[var(--muted)]'
-              }`}
+                }`}
             >
               {c.label}
             </button>
