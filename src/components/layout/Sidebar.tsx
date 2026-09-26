@@ -21,6 +21,8 @@ interface SidebarProps {
   activeCampaignCount: number;
   language: Language;
   theme: 'dark' | 'light';
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -29,7 +31,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onGoToLanding,
   activeCampaignCount,
   language,
+  mobileOpen = false,
+  onMobileClose,
 }) => {
+  const handleTab = (tab: string) => {
+    onTabChange(tab);
+    onMobileClose?.();
+  };
   const t = translations[language];
 
   const navItems = [
@@ -90,10 +98,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside
-      className="w-64 border-r border-[var(--card-border)] flex flex-col justify-between shrink-0 select-none transition-all"
-      style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-fg)' }}
-    >
+    <>
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Fermer le menu"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden cursor-pointer"
+          onClick={onMobileClose}
+        />
+      )}
+      <aside
+        className={`fixed md:static inset-y-0 left-0 z-50 md:z-auto w-[min(100vw,17rem)] md:w-64 border-r border-[var(--card-border)] flex flex-col justify-between shrink-0 select-none transition-transform duration-200 ease-out md:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        } top-16 md:top-0 h-[calc(100dvh-4rem)] md:h-auto`}
+        style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-fg)' }}
+      >
       <div className="p-4 space-y-6">
         <nav className="space-y-1">
           {navItems.map((item) => {
@@ -102,7 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             return (
               <button
                 key={item.id}
-                onClick={() => onTabChange(item.id)}
+                onClick={() => handleTab(item.id)}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer border ${
                   isActive
                     ? 'bg-[var(--primary)]/12 text-[var(--foreground)] border-[var(--primary)]/35 font-semibold shadow-sm'
@@ -144,7 +163,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <div className="p-4 border-t border-[var(--card-border)]">
         <button
-          onClick={onGoToLanding}
+          onClick={() => {
+            onGoToLanding();
+            onMobileClose?.();
+          }}
           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[var(--card-border)] bg-[var(--muted)] hover:bg-[var(--accent)] text-[var(--foreground)] text-xs font-medium transition-all cursor-pointer"
         >
           <LayoutTemplate className="w-4 h-4 text-[var(--primary)]" />
@@ -152,5 +174,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
     </aside>
+    </>
   );
 };

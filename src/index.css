@@ -314,8 +314,22 @@
   color: var(--info-bright);
 }
 
-/* Light mode: fix legacy dark-only Tailwind across console + modals */
-[data-vigilo-theme='light'] .text-white {
+/* Modals & forms: always use semantic tokens (no global text remap) */
+[data-vigilo-modal] {
+  color: var(--foreground);
+}
+
+[data-vigilo-theme='light'] [data-vigilo-modal] .text-white {
+  color: #ffffff;
+}
+
+[data-vigilo-theme='light'] [data-vigilo-modal] select option {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+/* Light mode: fix legacy dark-only Tailwind across console (not inside data-vigilo-modal) */
+[data-vigilo-theme='light'] :not([data-vigilo-modal]) .text-white {
   color: var(--foreground);
 }
 

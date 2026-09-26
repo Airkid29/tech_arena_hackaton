@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sparkles, Wand2, Eye, ShieldAlert, Check } from 'lucide-react';
+import { X, Sparkles, Wand2, Check } from 'lucide-react';
 import { Scenario, ScenarioCategory, DifficultyLevel } from '../../types';
 import { rodiumAiService } from '../../services/api';
 
@@ -14,16 +14,16 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
   onClose,
   onScenarioGenerated,
 }) => {
-  if (!isOpen) return null;
-
   const [scenarioType, setScenarioType] = useState<ScenarioCategory>('Phishing');
   const [targetAudience, setTargetAudience] = useState('Direction & Finance');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('Moyen');
   const [companyContext, setCompanyContext] = useState(
-    'PME de 35 collaborateurs, utilisation quotidienne de Microsoft 365, Teams et logiciel de facturation cloud.'
+    'PME de 35 collaborateurs, Microsoft 365, WhatsApp pro, clôture fiscale en cours.'
   );
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedResult, setGeneratedResult] = useState<any | null>(null);
+  const [generatedResult, setGeneratedResult] = useState<Record<string, unknown> | null>(null);
+
+  if (!isOpen) return null;
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,20 +45,21 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
 
   const handleSaveAndUse = () => {
     if (!generatedResult) return;
+    const gr = generatedResult as Record<string, string | string[]>;
     const newScenario: Scenario = {
       id: `scen-ai-${Date.now()}`,
-      name: generatedResult.name || `${scenarioType} sur-mesure Vigilo Coach`,
+      name: (gr.name as string) || `${scenarioType} sur-mesure Vigilo Coach`,
       category: scenarioType,
       difficulty,
-      senderName: generatedResult.senderName || 'Notification Sécurité',
-      senderEmail: generatedResult.senderEmail || 'alerte@support-securite-cloud.fr',
-      subject: generatedResult.subject || 'Action requise sur votre compte',
-      previewText: generatedResult.previewText || 'Scénario généré par Vigilo Coach',
-      body: generatedResult.body || '<p>Ceci est un test de simulation VIGILO.</p>',
-      psychologicalTriggers: generatedResult.psychologicalTriggers || ['Urgence', 'Autorité'],
-      redFlags: generatedResult.redFlags || ['Nom de domaine non officiel', 'Pression temporelle'],
+      senderName: (gr.senderName as string) || 'Notification Sécurité',
+      senderEmail: (gr.senderEmail as string) || 'alerte@support-securite-cloud.fr',
+      subject: (gr.subject as string) || 'Action requise sur votre compte',
+      previewText: (gr.previewText as string) || 'Scénario généré par Vigilo Coach',
+      body: (gr.body as string) || '<p>Ceci est un test de simulation VIGILO.</p>',
+      psychologicalTriggers: (gr.psychologicalTriggers as string[]) || ['Urgence', 'Autorité'],
+      redFlags: (gr.redFlags as string[]) || ['Nom de domaine non officiel', 'Pression temporelle'],
       landingPageContent:
-        generatedResult.landingPageContent ||
+        (gr.landingPageContent as string) ||
         'Ceci était un exercice VIGILO. Aucun identifiant n a été compromis.',
       isAiGenerated: true,
     };
@@ -66,59 +67,63 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
     onClose();
   };
 
+  const triggers = (generatedResult?.psychologicalTriggers as string[]) || [];
+  const redFlags = (generatedResult?.redFlags as string[]) || [];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl bg-[#0d131f] border border-slate-800 rounded-xl shadow-2xl overflow-hidden my-8">
-        {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/70">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-950 border border-emerald-800/80 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+      data-vigilo-modal
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-full sm:max-w-3xl max-h-[95dvh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-2xl overflow-hidden">
+        <div className="shrink-0 p-4 sm:p-5 border-b border-[var(--card-border)] bg-[var(--muted)] flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white">
-                Générateur de scénario — Vigilo Coach
-              </h2>
-              <p className="text-xs text-slate-400">
-                Créez un leurre sur-mesure adapté aux outils et habitudes de votre PME
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-[var(--foreground)]">Générateur RodiumAI</h2>
+              <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                Scénario sur-mesure pour votre PME
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--accent)] cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6 text-xs max-h-[75vh] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-sm min-h-0">
           {!generatedResult ? (
             <form onSubmit={handleGenerate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="font-semibold text-slate-200">Type de scénario</label>
+                  <label className="text-xs font-semibold text-[var(--foreground)]">Type de scénario</label>
                   <select
                     value={scenarioType}
                     onChange={(e) => setScenarioType(e.target.value as ScenarioCategory)}
-                    className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="vigilo-input w-full px-3 py-2.5 rounded-lg text-sm cursor-pointer"
                   >
-                    <option value="WhatsApp Phishing">💬 WhatsApp Phishing (Whishing & Fraude au Président)</option>
-                    <option value="Phishing">✉️ Phishing (Email usurpé)</option>
-                    <option value="Fake Invoice">📄 Fake Invoice (Fraude au faux RIB)</option>
-                    <option value="Smishing">📱 Smishing (SMS frauduleux)</option>
-                    <option value="MFA Fatigue">🔔 MFA Fatigue (Push spamming)</option>
-                    <option value="Social Engineering">👤 Social Engineering (Support IT)</option>
+                    <option value="WhatsApp Phishing">WhatsApp (Whishing)</option>
+                    <option value="Phishing">Phishing Email</option>
+                    <option value="Fake Invoice">Fake Invoice (RIB)</option>
+                    <option value="Smishing">Smishing (SMS)</option>
+                    <option value="MFA Fatigue">MFA Fatigue</option>
+                    <option value="Social Engineering">Social Engineering</option>
                   </select>
                 </div>
-
                 <div className="space-y-1.5">
-                  <label className="font-semibold text-slate-200">Public cible</label>
+                  <label className="text-xs font-semibold text-[var(--foreground)]">Public cible</label>
                   <select
                     value={targetAudience}
                     onChange={(e) => setTargetAudience(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="vigilo-input w-full px-3 py-2.5 rounded-lg text-sm cursor-pointer"
                   >
                     <option value="Direction & Finance">Direction & Finance</option>
                     <option value="Équipe Commerciale">Équipe Commerciale</option>
@@ -130,17 +135,17 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold text-slate-200">Niveau de difficulté souhaité</label>
+                <label className="text-xs font-semibold text-[var(--foreground)]">Difficulté</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['Facile', 'Moyen', 'Difficile'] as DifficultyLevel[]).map((lvl) => (
                     <button
                       key={lvl}
                       type="button"
                       onClick={() => setDifficulty(lvl)}
-                      className={`py-2 rounded-lg font-medium text-xs border transition-all cursor-pointer ${
+                      className={`py-2.5 rounded-lg font-medium text-xs border cursor-pointer ${
                         difficulty === lvl
-                          ? 'border-emerald-500 bg-emerald-950/40 text-emerald-300 font-semibold'
-                          : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-slate-200'
+                          ? 'border-emerald-600 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-semibold'
+                          : 'border-[var(--card-border)] bg-[var(--surface-inset)] text-[var(--muted-foreground)]'
                       }`}
                     >
                       {lvl}
@@ -150,98 +155,92 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold text-slate-200">
-                  Contexte spécifique de la PME (fournisseurs, logiciels, période)
-                </label>
+                <label className="text-xs font-semibold text-[var(--foreground)]">Contexte PME</label>
                 <textarea
                   value={companyContext}
                   onChange={(e) => setCompanyContext(e.target.value)}
                   rows={3}
-                  placeholder="Ex : Fin d'année fiscale, changement d'outil RH récent, sous-traitant transport habituel..."
-                  className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500 resize-none"
+                  className="vigilo-input w-full px-3 py-2.5 rounded-lg text-sm resize-none"
+                  placeholder="Fournisseurs, logiciels, période fiscale…"
                 />
               </div>
 
-              <div className="pt-2 flex justify-end">
+              <div className="pt-2 flex justify-stretch sm:justify-end">
                 <button
                   type="submit"
                   disabled={isGenerating}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-md shadow-emerald-950 disabled:opacity-50 transition-all cursor-pointer"
+                  className="vigilo-btn-orange w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50 cursor-pointer"
                 >
                   <Wand2 className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-                  <span>{isGenerating ? 'Génération RodiumAI en cours...' : 'Générer avec RodiumAI'}</span>
+                  {isGenerating ? 'Génération…' : 'Générer avec RodiumAI'}
                 </button>
               </div>
             </form>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-950/40 border border-emerald-800/60 text-emerald-300">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span className="font-semibold">Scénario généré par RodiumAI avec succès</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Check className="w-4 h-4 shrink-0" />
+                  Scénario généré avec succès
                 </div>
                 <button
+                  type="button"
                   onClick={() => setGeneratedResult(null)}
-                  className="text-xs text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                  className="text-xs underline text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer text-left sm:text-right"
                 >
                   Modifier les paramètres
                 </button>
               </div>
 
-              {/* Preview Card */}
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3">
+              <div className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--surface-inset)] space-y-3">
                 <div>
-                  <span className="text-[10px] font-mono text-emerald-400 uppercase">
-                    {generatedResult.category} · {generatedResult.difficulty}
+                  <span className="text-[10px] font-mono text-[var(--primary)] uppercase">
+                    {String(generatedResult.category || scenarioType)} · {difficulty}
                   </span>
-                  <h3 className="text-base font-bold text-white mt-0.5">{generatedResult.name}</h3>
+                  <h3 className="text-base font-bold text-[var(--foreground)] mt-1">{String(generatedResult.name)}</h3>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300 bg-slate-950/60 p-3 rounded-lg border border-slate-800">
-                  <div>
-                    <span className="text-slate-500">Expéditeur simulé : </span>
-                    <strong className="text-slate-200">{generatedResult.senderName}</strong>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm bg-[var(--card)] p-3 rounded-lg border border-[var(--card-border)]">
+                  <div className="text-[var(--muted-foreground)]">
+                    Expéditeur :{' '}
+                    <strong className="text-[var(--foreground)]">{String(generatedResult.senderName)}</strong>
                   </div>
-                  <div>
-                    <span className="text-slate-500">Adresse : </span>
-                    <code className="text-blue-400 font-mono text-[11px]">{generatedResult.senderEmail}</code>
+                  <div className="text-[var(--muted-foreground)] break-all">
+                    Adresse :{' '}
+                    <code className="text-[var(--primary)] font-mono text-xs">{String(generatedResult.senderEmail)}</code>
                   </div>
-                  <div className="sm:col-span-2">
-                    <span className="text-slate-500">Objet : </span>
-                    <span className="text-slate-200 font-medium">{generatedResult.subject}</span>
+                  <div className="sm:col-span-2 text-[var(--muted-foreground)]">
+                    Objet : <span className="text-[var(--foreground)] font-medium">{String(generatedResult.subject)}</span>
                   </div>
                 </div>
 
-                {/* Email Body preview */}
                 <div className="space-y-1">
-                  <span className="text-slate-400 font-medium">Contenu du message de test :</span>
+                  <span className="text-xs font-semibold text-[var(--foreground)]">Aperçu du message</span>
                   <div
-                    className="p-4 rounded-lg bg-white text-slate-900 border border-slate-700 overflow-x-auto text-xs"
-                    dangerouslySetInnerHTML={{ __html: generatedResult.body }}
+                    className="p-4 rounded-lg bg-white text-slate-900 border border-[var(--card-border)] overflow-x-auto text-xs max-h-48 overflow-y-auto"
+                    dangerouslySetInnerHTML={{ __html: String(generatedResult.body) }}
                   />
                 </div>
 
-                {/* Red Flags & Triggers */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800">
-                    <span className="font-semibold text-slate-200">Leviers psychologiques :</span>
-                    <ul className="mt-1 space-y-1 text-slate-400">
-                      {generatedResult.psychologicalTriggers?.map((tr: string, i: number) => (
-                        <li key={i} className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                          <span>{tr}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-[var(--card)] border border-[var(--card-border)]">
+                    <span className="font-semibold text-[var(--foreground)] text-xs">Leviers psychologiques</span>
+                    <ul className="mt-2 space-y-1 text-[var(--muted-foreground)] text-xs">
+                      {triggers.map((tr, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                          {tr}
                         </li>
                       ))}
                     </ul>
                   </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800">
-                    <span className="font-semibold text-slate-200">Signes d'alerte (Red flags) :</span>
-                    <ul className="mt-1 space-y-1 text-slate-400">
-                      {generatedResult.redFlags?.map((rf: string, i: number) => (
-                        <li key={i} className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                          <span>{rf}</span>
+                  <div className="p-3 rounded-lg bg-[var(--card)] border border-[var(--card-border)]">
+                    <span className="font-semibold text-[var(--foreground)] text-xs">Red flags</span>
+                    <ul className="mt-2 space-y-1 text-[var(--muted-foreground)] text-xs">
+                      {redFlags.map((rf, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                          {rf}
                         </li>
                       ))}
                     </ul>
@@ -249,21 +248,16 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
                 </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 rounded-lg border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
-                >
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <button type="button" onClick={onClose} className="vigilo-btn-secondary w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm cursor-pointer">
                   Fermer
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveAndUse}
-                  className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium cursor-pointer transition-colors"
+                  className="vigilo-btn-orange w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer"
                 >
-                  Ajouter au catalogue et utiliser
+                  Ajouter au catalogue
                 </button>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Play, ShieldAlert, Sparkles, AlertCircle, CheckCircle, Info } from 'lucide-react';
-import { Campaign, Scenario, ScenarioCategory, DifficultyLevel, Employee } from '../../types';
+import { X, Play } from 'lucide-react';
+import { Campaign, Scenario, DifficultyLevel, Employee } from '../../types';
 
 interface CreateCampaignModalProps {
   isOpen: boolean;
@@ -23,8 +23,6 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   isReTestMode,
   baselineCampaign,
 }) => {
-  if (!isOpen) return null;
-
   const defaultScenario = preselectedScenarioId
     ? scenarios.find((s) => s.id === preselectedScenarioId) || scenarios[0]
     : scenarios[0];
@@ -32,21 +30,23 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   const [name, setName] = useState(
     isReTestMode && baselineCampaign
       ? `Re-test : ${baselineCampaign.name} (Post-Formation)`
-      : `Campagne ${defaultScenario.category} — ${new Date().toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}`
+      : `Campagne ${defaultScenario?.category || 'Phishing'} — ${new Date().toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}`
   );
   const [description, setDescription] = useState(
     isReTestMode && baselineCampaign
       ? `Campagne de re-test pour mesurer la réduction du risque cyber après la micro-formation.`
-      : `Simulation contrôlée de type ${defaultScenario.category} pour évaluer le réflexe de vérification des équipes.`
+      : `Simulation contrôlée pour évaluer le réflexe de vérification des équipes.`
   );
-  const [selectedScenarioId, setSelectedScenarioId] = useState(defaultScenario.id);
+  const [selectedScenarioId, setSelectedScenarioId] = useState(defaultScenario?.id || scenarios[0]?.id);
   const [targetGroup, setTargetGroup] = useState(
     baselineCampaign ? baselineCampaign.targetGroup : 'Tous les collaborateurs'
   );
-  const [difficulty, setDifficulty] = useState<DifficultyLevel>(defaultScenario.difficulty);
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>(defaultScenario?.difficulty || 'Moyen');
   const [adminValidated, setAdminValidated] = useState(false);
   const [sendRealEmails, setSendRealEmails] = useState(false);
   const [isSending, setIsSending] = useState(false);
+
+  if (!isOpen || scenarios.length === 0) return null;
 
   const selectedScenario = scenarios.find((s) => s.id === selectedScenarioId) || scenarios[0];
 
@@ -54,7 +54,6 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
     e.preventDefault();
     if (!adminValidated) return;
 
-    // Target sizes per cohort
     const cohortSizes: Record<string, number> = {
       'Tous les collaborateurs': 32,
       'Direction & Finance': 12,
@@ -64,7 +63,6 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
     };
     const targetedCount = cohortSizes[targetGroup] || 25;
 
-    // Build departments
     const departments =
       targetGroup === 'Direction & Finance'
         ? [
@@ -103,22 +101,23 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
       baselineCampaignId: baselineCampaign?.id,
     };
 
-    if (sendRealEmails && employees && employees.length > 0) {
+    if (sendRealEmails && employees.length > 0) {
       setIsSending(true);
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      
-      const targetedEmployees = targetGroup.startsWith('Tous') 
-        ? employees 
-        : employees.filter(emp => targetGroup.includes(emp.department));
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const targetedEmployees = targetGroup.startsWith('Tous')
+        ? employees
+        : employees.filter((emp) => targetGroup.includes(emp.department));
 
       try {
-        await Promise.all(targetedEmployees.map(emp => 
-          fetch('/api/send-live-test', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: emp.email, scenario: selectedScenario, origin }),
-          })
-        ));
+        await Promise.all(
+          targetedEmployees.map((emp) =>
+            fetch('/api/send-live-test', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: emp.email, scenario: selectedScenario, origin }),
+            })
+          )
+        );
       } catch (err) {
         console.error("Erreur lors de l'envoi des emails réels:", err);
       }
@@ -130,173 +129,167 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl bg-[#0d131f] border border-slate-800 rounded-xl shadow-2xl overflow-hidden my-8">
-        {/* Modal Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
-              <Play className="w-4 h-4 text-blue-400" />
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+      data-vigilo-modal
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-full sm:max-w-2xl max-h-[95dvh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-xl border border-[var(--card-border)] bg-[var(--card)] shadow-2xl overflow-hidden">
+        <div className="shrink-0 p-4 sm:p-5 border-b border-[var(--card-border)] bg-[var(--muted)] flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-[var(--primary)]/15 border border-[var(--primary)]/30 flex items-center justify-center shrink-0">
+              <Play className="w-4 h-4 text-[var(--primary)]" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white">
-                {isReTestMode ? 'Créer une campagne de Re-test' : 'Nouvelle campagne de simulation'}
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-[var(--foreground)] leading-snug">
+                {isReTestMode ? 'Campagne de Re-test' : 'Nouvelle campagne'}
               </h2>
-              <p className="text-xs text-slate-400">
-                {isReTestMode
-                  ? 'Évaluez les progrès des collaborateurs après la micro-formation'
-                  : 'Configurez et lancez une cyberattaque contrôlée'}
+              <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                {isReTestMode ? 'Mesurer les progrès post-formation' : 'Cyberattaque contrôlée'}
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 text-xs">
-          {/* Campaign Name */}
-          <div className="space-y-1.5">
-            <label className="font-semibold text-slate-200">Nom de la campagne</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-1.5">
-            <label className="font-semibold text-slate-200">Objectif opérationnel</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 resize-none"
-            />
-          </div>
-
-          {/* Select Scenario */}
-          <div className="space-y-2">
-            <label className="font-semibold text-slate-200">Scénario d'attaque contrôlée</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-              {scenarios.map((scen) => (
-                <div
-                  key={scen.id}
-                  onClick={() => {
-                    setSelectedScenarioId(scen.id);
-                    setDifficulty(scen.difficulty);
-                  }}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    selectedScenarioId === scen.id
-                      ? 'border-blue-500 bg-blue-950/30'
-                      : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-200">{scen.category}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">{scen.difficulty}</span>
-                  </div>
-                  <div className="text-slate-300 font-medium text-[11px] mt-1 line-clamp-1">
-                    {scen.name}
-                  </div>
-                  <div className="text-slate-500 text-[10px] mt-0.5 line-clamp-1">
-                    Expéditeur : {scen.senderName}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Target Population & Difficulty */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-sm">
             <div className="space-y-1.5">
-              <label className="font-semibold text-slate-200">Population cible</label>
-              <select
-                value={targetGroup}
-                onChange={(e) => setTargetGroup(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
-              >
-                <option value="Tous les collaborateurs">Tous les collaborateurs (32)</option>
-                <option value="Direction & Finance">Direction & Finance (12)</option>
-                <option value="Équipe Commerciale">Équipe Commerciale (10)</option>
-                <option value="Ressources Humaines">Ressources Humaines (6)</option>
-                <option value="Technique & R&D">Technique & R&D (14)</option>
-              </select>
+              <label className="text-xs font-semibold text-[var(--foreground)]">Nom de la campagne</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="vigilo-input w-full px-3 py-2.5 rounded-lg text-sm"
+              />
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-semibold text-slate-200">Niveau de difficulté</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(['Facile', 'Moyen', 'Difficile'] as DifficultyLevel[]).map((lvl) => (
+              <label className="text-xs font-semibold text-[var(--foreground)]">Objectif</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                className="vigilo-input w-full px-3 py-2.5 rounded-lg text-sm resize-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-[var(--foreground)]">Scénario</label>
+              <div className="grid grid-cols-1 gap-2 max-h-44 sm:max-h-52 overflow-y-auto pr-1">
+                {scenarios.map((scen) => (
                   <button
-                    key={lvl}
+                    key={scen.id}
                     type="button"
-                    onClick={() => setDifficulty(lvl)}
-                    className={`py-2 rounded-lg font-medium text-xs border transition-all cursor-pointer ${
-                      difficulty === lvl
-                        ? 'border-blue-500 bg-blue-600/20 text-blue-300 font-semibold'
-                        : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-slate-200'
+                    onClick={() => {
+                      setSelectedScenarioId(scen.id);
+                      setDifficulty(scen.difficulty);
+                    }}
+                    className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                      selectedScenarioId === scen.id
+                        ? 'border-[var(--primary)] bg-[var(--primary)]/10 ring-1 ring-[var(--primary)]/25'
+                        : 'border-[var(--card-border)] bg-[var(--surface-inset)] hover:border-[var(--primary)]/40'
                     }`}
                   >
-                    {lvl}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-[var(--foreground)] text-xs">{scen.category}</span>
+                      <span className="text-[10px] text-[var(--muted-foreground)] font-mono">{scen.difficulty}</span>
+                    </div>
+                    <div className="text-[var(--foreground)] font-medium text-xs mt-1 line-clamp-2">{scen.name}</div>
+                    <div className="text-[var(--muted-foreground)] text-[10px] mt-0.5 line-clamp-1">
+                      Expéditeur : {scen.senderName}
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Mandatory Administrator Validation Checkbox (Section 6) */}
-          <div className="p-3.5 rounded-lg border border-amber-900/60 bg-amber-950/20 space-y-2">
-            <div className="flex items-start gap-2.5">
-              <input
-                type="checkbox"
-                id="admin-validate"
-                checked={adminValidated}
-                onChange={(e) => setAdminValidated(e.target.checked)}
-                className="mt-0.5 rounded border-slate-700 text-amber-600 focus:ring-0 cursor-pointer"
-              />
-              <label htmlFor="admin-validate" className="text-slate-300 leading-relaxed cursor-pointer">
-                <strong className="text-amber-300">Validation administrateur obligatoire :</strong> J'atteste que cette campagne est déployée dans un cadre de sensibilisation autorisé et contrôlé au sein de l'entreprise, conformément aux recommandations de l'ANCy.
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[var(--foreground)]">Population cible</label>
+                <select
+                  value={targetGroup}
+                  onChange={(e) => setTargetGroup(e.target.value)}
+                  className="vigilo-input w-full px-3 py-2.5 rounded-lg text-sm cursor-pointer"
+                >
+                  <option value="Tous les collaborateurs">Tous les collaborateurs (32)</option>
+                  <option value="Direction & Finance">Direction & Finance (12)</option>
+                  <option value="Équipe Commerciale">Équipe Commerciale (10)</option>
+                  <option value="Ressources Humaines">Ressources Humaines (6)</option>
+                  <option value="Technique & R&D">Technique & R&D (14)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[var(--foreground)]">Difficulté</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['Facile', 'Moyen', 'Difficile'] as DifficultyLevel[]).map((lvl) => (
+                    <button
+                      key={lvl}
+                      type="button"
+                      onClick={() => setDifficulty(lvl)}
+                      className={`py-2 rounded-lg font-medium text-xs border transition-all cursor-pointer ${
+                        difficulty === lvl
+                          ? 'border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--primary)] font-semibold'
+                          : 'border-[var(--card-border)] bg-[var(--surface-inset)] text-[var(--muted-foreground)]'
+                      }`}
+                    >
+                      {lvl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 space-y-3">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={adminValidated}
+                  onChange={(e) => setAdminValidated(e.target.checked)}
+                  className="mt-1 rounded accent-[var(--primary)]"
+                />
+                <span className="text-[var(--foreground)] text-xs leading-relaxed">
+                  <strong className="text-amber-800 dark:text-amber-300">Validation admin :</strong> j&apos;atteste que cette campagne est autorisée et non punitive au sein de l&apos;entreprise.
+                </span>
+              </label>
+              <label className="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-amber-200 dark:border-amber-900/50">
+                <input
+                  type="checkbox"
+                  checked={sendRealEmails}
+                  onChange={(e) => setSendRealEmails(e.target.checked)}
+                  className="mt-1 rounded accent-[var(--primary)]"
+                />
+                <span className="text-[var(--foreground)] text-xs leading-relaxed">
+                  <strong className="text-[var(--primary)]">Emails réels :</strong> envoyer aux collaborateurs de l&apos;annuaire (SMTP requis).
+                </span>
               </label>
             </div>
-            
-            <div className="flex items-start gap-2.5 mt-3 pt-3 border-t border-amber-900/30">
-              <input
-                type="checkbox"
-                id="send-real-emails"
-                checked={sendRealEmails}
-                onChange={(e) => setSendRealEmails(e.target.checked)}
-                className="mt-0.5 rounded border-slate-700 text-[#fb923c] focus:ring-0 cursor-pointer"
-              />
-              <label htmlFor="send-real-emails" className="text-slate-300 leading-relaxed cursor-pointer">
-                <strong className="text-[#fb923c]">Envoyer réellement les emails :</strong> Actionner l'envoi réel aux collaborateurs ciblés dans l'Annuaire.
-              </label>
-            </div>
           </div>
 
-          {/* Modal Footer */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="shrink-0 p-4 sm:p-5 border-t border-[var(--card-border)] bg-[var(--muted)] flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="vigilo-btn-secondary w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm cursor-pointer"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={!adminValidated || isSending}
-              className="flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="vigilo-btn-orange w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-40 cursor-pointer"
             >
-              <Play className="w-4 h-4 fill-white" />
-              <span>{isSending ? 'Envoi en cours...' : (isReTestMode ? 'Démarrer le Re-test' : 'Lancer la simulation')}</span>
+              <Play className="w-4 h-4" />
+              {isSending ? 'Envoi…' : isReTestMode ? 'Démarrer le Re-test' : 'Lancer la simulation'}
             </button>
           </div>
         </form>

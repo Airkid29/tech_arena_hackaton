@@ -99,6 +99,7 @@ export default function App() {
   const [activeInteractiveTraining, setActiveInteractiveTraining] = useState<TrainingModule | null>(null);
   const [trainingToEdit, setTrainingToEdit] = useState<TrainingModule | null>(null);
   const [trainingToAssign, setTrainingToAssign] = useState<TrainingModule | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Magic Link Trap Check
   useEffect(() => {
@@ -477,10 +478,10 @@ export default function App() {
         onToggleLanguage={handleToggleLanguage}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        onOpenMobileNav={() => setMobileNavOpen(true)}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Navigation Sidebar */}
+      <div className="flex-1 flex overflow-hidden relative">
         <Sidebar
           activeTab={activeTab}
           onTabChange={(tab) => {
@@ -493,10 +494,11 @@ export default function App() {
           activeCampaignCount={activeCampaignCount}
           language={language}
           theme={theme}
+          mobileOpen={mobileNavOpen}
+          onMobileClose={() => setMobileNavOpen(false)}
         />
 
-        {/* Main Content Workspace */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 md:p-8 min-w-0 w-full">
           {activeTab === 'overview' && (
             <OverviewTab
               campaigns={campaigns}

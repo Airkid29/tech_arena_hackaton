@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Eye, LayoutTemplate, Sun, Moon } from 'lucide-react';
+import { Shield, Eye, LayoutTemplate, Sun, Moon, Menu } from 'lucide-react';
 import { SimulationProviderSettings } from '../../types';
 import { Language, translations } from '../../i18n/translations';
 
@@ -12,6 +12,7 @@ interface NavbarProps {
   onToggleLanguage: (lang: Language) => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
+  onOpenMobileNav?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -22,16 +23,27 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleLanguage,
   theme,
   onToggleTheme,
+  onOpenMobileNav,
 }) => {
   const isDark = theme === 'dark';
   const t = translations[language];
 
   return (
-    <header className="sticky top-0 z-30 h-16 border-b border-[var(--card-border)] backdrop-blur-xl bg-[var(--background)]/90 px-6 flex items-center justify-between transition-all">
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-30 h-16 border-b border-[var(--card-border)] backdrop-blur-xl bg-[var(--background)]/90 px-3 sm:px-6 flex items-center justify-between gap-2 transition-all">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        {onOpenMobileNav && (
+          <button
+            type="button"
+            onClick={onOpenMobileNav}
+            className="md:hidden p-2 rounded-lg vigilo-chrome-btn cursor-pointer shrink-0"
+            aria-label="Ouvrir le menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
         <div
           onClick={onGoToLanding}
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer group min-w-0"
           title="Retour à la présentation VIGILO"
         >
           <div className="w-9 h-9 rounded-xl bg-[var(--primary)] flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
@@ -46,14 +58,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Console PME
               </span>
             </div>
-            <p className="text-[11px] text-[var(--muted-foreground)] hidden sm:block font-mono">
+            <p className="text-[11px] text-[var(--muted-foreground)] hidden lg:block font-mono truncate">
               Vigilance & Cyber Risk SaaS
             </p>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         <div className="flex items-center p-0.5 rounded-lg vigilo-chrome-btn text-xs font-mono">
           <button
             onClick={() => onToggleLanguage('fr')}
