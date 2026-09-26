@@ -11,6 +11,16 @@ export type DifficultyLevel = 'Facile' | 'Moyen' | 'Difficile';
 export type CampaignStatus = 'brouillon' | 'planifiée' | 'en_cours' | 'terminée';
 export type AppViewMode = 'landing' | 'app' | 'login';
 
+export interface Employee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  role: string;
+  riskScore: number;
+}
+
 export interface FlashArticle {
   id: string;
   title: string;

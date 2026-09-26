@@ -1,4 +1,10 @@
-import { Campaign, Scenario, TrainingModule, ReTestRecord, SimulationProviderSettings, FlashArticle } from '../types';
+import { Campaign, Scenario, TrainingModule, ReTestRecord, SimulationProviderSettings, FlashArticle, Employee } from '../types';
+
+export const INITIAL_EMPLOYEES: Employee[] = [
+  { id: 'emp-1', firstName: 'Jean', lastName: 'Dupont', email: 'jean.dupont@entreprise.com', department: 'Finance', role: 'Comptable', riskScore: 85 },
+  { id: 'emp-2', firstName: 'Marie', lastName: 'Curie', email: 'marie.curie@entreprise.com', department: 'IT', role: 'Développeuse', riskScore: 12 },
+  { id: 'emp-3', firstName: 'Paul', lastName: 'Martin', email: 'paul.martin@entreprise.com', department: 'RH', role: 'Manager', riskScore: 45 },
+];
 
 export const INITIAL_SCENARIOS: Scenario[] = [
   {

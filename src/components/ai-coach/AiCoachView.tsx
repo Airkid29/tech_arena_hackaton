@@ -66,7 +66,7 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
               <span className="text-amber-400 font-bold">Powered by RodiumAI</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-              <Sparkles className="w-7 h-7 text-[#fb923c]" />
+              
               <span>Vigilo Cyber Coach by RodiumAI</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">

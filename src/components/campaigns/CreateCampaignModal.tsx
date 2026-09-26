@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { X, Play, ShieldAlert, Sparkles, AlertCircle, CheckCircle, Info } from 'lucide-react';
-import { Campaign, Scenario, ScenarioCategory, DifficultyLevel } from '../../types';
+import { Campaign, Scenario, ScenarioCategory, DifficultyLevel, Employee } from '../../types';
 
 interface CreateCampaignModalProps {
   isOpen: boolean;
   onClose: () => void;
   scenarios: Scenario[];
+  employees: Employee[];
   onCreate: (campaignData: Partial<Campaign>) => void;
   preselectedScenarioId?: string;
   isReTestMode?: boolean;
@@ -16,6 +17,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   isOpen,
   onClose,
   scenarios,
+  employees,
   onCreate,
   preselectedScenarioId,
   isReTestMode,
@@ -43,10 +45,12 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   );
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(defaultScenario.difficulty);
   const [adminValidated, setAdminValidated] = useState(false);
+  const [sendRealEmails, setSendRealEmails] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const selectedScenario = scenarios.find((s) => s.id === selectedScenarioId) || scenarios[0];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminValidated) return;
 
@@ -98,6 +102,28 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
       isReTest: isReTestMode,
       baselineCampaignId: baselineCampaign?.id,
     };
+
+    if (sendRealEmails && employees && employees.length > 0) {
+      setIsSending(true);
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      
+      const targetedEmployees = targetGroup.startsWith('Tous') 
+        ? employees 
+        : employees.filter(emp => targetGroup.includes(emp.department));
+
+      try {
+        await Promise.all(targetedEmployees.map(emp => 
+          fetch('/api/send-live-test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emp.email, scenario: selectedScenario, origin }),
+          })
+        ));
+      } catch (err) {
+        console.error("Erreur lors de l'envoi des emails réels:", err);
+      }
+      setIsSending(false);
+    }
 
     onCreate(newCampaign);
     onClose();
@@ -234,10 +260,23 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                 id="admin-validate"
                 checked={adminValidated}
                 onChange={(e) => setAdminValidated(e.target.checked)}
-                className="mt-0.5 rounded border-slate-700 text-blue-600 focus:ring-0 cursor-pointer"
+                className="mt-0.5 rounded border-slate-700 text-amber-600 focus:ring-0 cursor-pointer"
               />
               <label htmlFor="admin-validate" className="text-slate-300 leading-relaxed cursor-pointer">
                 <strong className="text-amber-300">Validation administrateur obligatoire :</strong> J'atteste que cette campagne est déployée dans un cadre de sensibilisation autorisé et contrôlé au sein de l'entreprise, conformément aux recommandations de l'ANSSI.
+              </label>
+            </div>
+            
+            <div className="flex items-start gap-2.5 mt-3 pt-3 border-t border-amber-900/30">
+              <input
+                type="checkbox"
+                id="send-real-emails"
+                checked={sendRealEmails}
+                onChange={(e) => setSendRealEmails(e.target.checked)}
+                className="mt-0.5 rounded border-slate-700 text-[#fb923c] focus:ring-0 cursor-pointer"
+              />
+              <label htmlFor="send-real-emails" className="text-slate-300 leading-relaxed cursor-pointer">
+                <strong className="text-[#fb923c]">Envoyer réellement les emails :</strong> Actionner l'envoi réel aux collaborateurs ciblés dans l'Annuaire.
               </label>
             </div>
           </div>
@@ -253,11 +292,11 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!adminValidated}
+              disabled={!adminValidated || isSending}
               className="flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
             >
               <Play className="w-4 h-4 fill-white" />
-              <span>{isReTestMode ? 'Démarrer le Re-test' : 'Lancer la simulation'}</span>
+              <span>{isSending ? 'Envoi en cours...' : (isReTestMode ? 'Démarrer le Re-test' : 'Lancer la simulation')}</span>
             </button>
           </div>
         </form>

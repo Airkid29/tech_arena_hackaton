@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   LayoutTemplate,
   Bell,
+  Users,
 } from 'lucide-react';
 import { Language, translations } from '../../i18n/translations';
 
@@ -56,6 +57,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: t.nav.coach,
       icon: Sparkles,
       badge: 'RodiumAI',
+    },
+    {
+      id: 'directory',
+      label: 'Annuaire',
+      icon: Users,
+      badge: null,
     },
     {
       id: 'training',

@@ -16,6 +16,7 @@ import { FlashNewsView } from './components/flash-news/FlashNewsView';
 import { EmployeeSimulatorModal } from './components/employee-simulator/EmployeeSimulatorModal';
 import { LandingPage } from './components/landing/LandingPage';
 import { AdminLogin } from './components/auth/AdminLogin';
+import { DirectoryView } from './components/directory/DirectoryView';
 import {
   INITIAL_CAMPAIGNS,
   INITIAL_SCENARIOS,
@@ -23,6 +24,7 @@ import {
   INITIAL_RETEST_RECORD,
   INITIAL_SETTINGS,
   INITIAL_FLASH_ARTICLES,
+  INITIAL_EMPLOYEES,
 } from './data/mockData';
 import {
   Campaign,
@@ -33,6 +35,7 @@ import {
   AIAnalysis,
   AppViewMode,
   FlashArticle,
+  Employee,
 } from './types';
 import { Language } from './i18n/translations';
 
@@ -76,6 +79,7 @@ export default function App() {
   const [retestRecord, setRetestRecord] = useState<ReTestRecord>(INITIAL_RETEST_RECORD);
   const [settings, setSettings] = useState<SimulationProviderSettings>(INITIAL_SETTINGS);
   const [flashArticles, setFlashArticles] = useState<FlashArticle[]>(INITIAL_FLASH_ARTICLES);
+  const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
 
   // Modals & Sub-flows
   const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
@@ -467,6 +471,18 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'directory' && (
+            <DirectoryView
+              employees={employees}
+              onAddEmployee={(newEmp) => {
+                setEmployees((prev) => [{ ...newEmp, id: `emp-${Date.now()}`, riskScore: Math.floor(Math.random() * 40) + 10 }, ...prev]);
+              }}
+              onRemoveEmployee={(id) => {
+                setEmployees((prev) => prev.filter(e => e.id !== id));
+              }}
+            />
+          )}
+
           {activeTab === 'training' && (
             <TrainingView
               trainings={trainings}
@@ -511,6 +527,7 @@ export default function App() {
         isOpen={isCreateCampaignOpen}
         onClose={() => setIsCreateCampaignOpen(false)}
         scenarios={scenarios}
+        employees={employees}
         onCreate={handleCreateCampaign}
         preselectedScenarioId={createCampaignScenarioId}
         isReTestMode={isReTestCreateMode}
