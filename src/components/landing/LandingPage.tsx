@@ -212,7 +212,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
             <p className="text-sm leading-relaxed mb-6">
-              "Salut, je suis en réunion client. J'ai besoin d'un virement urgent de 3 500€ à valider immédiatement par ce lien pour débloquer le contrat."
+              "Salut, je suis en réunion avec un client. J'ai besoin d'un virement urgent de 500.000 F CFA à valider immédiatement par ce lien pour débloquer le contrat."
             </p>
             <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-xs flex items-start gap-2">
               <span className="font-bold shrink-0">VIGILO :</span>
