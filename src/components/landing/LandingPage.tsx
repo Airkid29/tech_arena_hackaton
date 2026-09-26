@@ -97,14 +97,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="pt-24 pb-20 px-6 max-w-5xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card-border)] text-[var(--muted-foreground)] text-xs font-medium mb-8">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-          Conforme aux recommandations de l'ANSSI pour les PME
+          Conforme aux recommandations de l'ANCy pour les PME
         </div>
 
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] text-[var(--foreground)] max-w-4xl mx-auto">
           {language === 'fr' ? (
-            <>Réduisez votre risque humain. <br /><span className="text-[var(--primary)]">Mesurablement.</span></>
+            <>Augmenter la vigilance de votre équipe face aux <span className="text-[var(--primary)]">cybermenaces.</span></>
           ) : (
-            <>Reduce your human risk. <br /><span className="text-[var(--primary)]">Measurably.</span></>
+            <>Improve your team's vigilance against <span className="text-[var(--primary)]">cyber threats.</span></>
           )}
         </h1>
 
@@ -212,7 +212,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
             <p className="text-sm leading-relaxed mb-6">
-              "Salut, je suis en réunion client. J'ai besoin d'un virement urgent de 3 500€ à valider immédiatement par ce lien pour débloquer le contrat."
+              "Salut, je suis en réunion avec un client. J'ai besoin d'un virement urgent de 500.000 F CFA à valider immédiatement par ce lien pour débloquer le contrat."
             </p>
             <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-xs flex items-start gap-2">
               <span className="font-bold shrink-0">VIGILO :</span>

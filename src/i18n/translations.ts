@@ -61,7 +61,7 @@ export const translations = {
       exploreFlash: 'Découvrir les Flash Infos',
       finalCtaTitle: 'Prêt à renforcer la résilience de vos collaborateurs ?',
       finalCtaDesc: 'Démarrez votre première simulation en moins de 3 minutes.',
-      rightsReserved: 'Tous droits réservés. Conforme aux recommandations ANSSI pour la sensibilisation en entreprise.',
+      rightsReserved: 'Tous droits réservés. Conforme aux recommandations ANCy pour la sensibilisation en entreprise.',
     },
 
     // WhatsApp & Simulator

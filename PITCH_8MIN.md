@@ -13,7 +13,7 @@
 [01:00 - 02:30] 💡 2. LA SOLUTION VIGILO & LA BOUCLE EN 5 ÉTAPES
 [02:30 - 05:00] 🖥️ 3. DÉMONSTRATION INTERACTIVE EN DIRECT (DEMO LIVE)
 [05:00 - 06:30] 📊 4. ROI, BUSINESS MODEL & DIFFÉRENCIATION (vs KnowBe4)
-[06:30 - 08:00] 🛡️ 5. CONFORMITÉ ANSSI / RGPD & CONCLUSION PERCUTANTE
+[06:30 - 08:00] 🛡️ 5. CONFORMITÉ ANCy / RGPD & CONCLUSION PERCUTANTE
 ```
 
 ---
@@ -24,7 +24,7 @@
 
 > *"Messieurs et Mesdames les membres du jury,*
 > 
-> *Imaginez un lundi matin à 9h. Le directeur financier d'une PME de 40 salariés reçoit un message WhatsApp d'apparence anodine de son PDG : 'Je suis en réunion client urgente, peux-tu valider ce virement confidentiel de 4 800€ avant 10h ?' En 30 secondes, le piège se referme. L'argent part sur un compte frauduleux.*
+> *Imaginez un lundi matin à 9h. Le directeur financier d'une PME de 40 salariés reçoit un message WhatsApp d'apparence anodine de son PDG : 'Je suis en réunion client urgente, peux-tu valider ce virement confidentiel de 4 800F CFA avant 10h ?' En 30 secondes, le piège se referme. L'argent part sur un compte frauduleux.*
 > 
 > *Aujourd'hui, **90% des cyberattaques qui réussissent n'exploitent pas une faille logicielle, mais une vulnérabilité humaine**. Les PME investissent des milliers d'euros dans des pare-feux et des antivirus sophistiqués, mais négligent le maillon le plus ciblé : **leurs propres collaborateurs**.*
 > 
@@ -73,15 +73,15 @@
 > 3. **Format Micro-Learning (2 min)** : Aucune perte de productivité pour l'entreprise.
 > 
 > **Business Model SaaS B2B** :
-> * Abonnement mensuel par collaborateur (ex: **3€ / utilisateur / mois**).
-> * Un ROI immédiat pour la PME : éviter une seule fraude au président de 10 000€ rentabilise la plateforme pour 5 ans."*
+> * Abonnement mensuel par collaborateur (ex: **3F CFA / utilisateur / mois**).
+> * Un ROI immédiat pour la PME : éviter une seule fraude au président de 10 000F CFA rentabilise la plateforme pour 5 ans."*
 
 ---
 
-### 🛡️ MINUTE 6:30 - 8:00 | Conformité ANSSI / RGPD & Conclusion
+### 🛡️ MINUTE 6:30 - 8:00 | Conformité ANCy / RGPD & Conclusion
 
 > *"Sur le plan réglementaire, VIGILO respecte strictement le **RGPD (Article 32)** : pas de stigmatisation individuelle, pseudonymisation des cohortes, et données hébergées en Europe.*
-> *De plus, VIGILO permet aux PME de se conformer directement aux **directives de l'ANSSI** et aux exigences de la directive européenne **NIS 2**.*
+> *De plus, VIGILO permet aux PME de se conformer directement aux **directives de l'ANCy** et aux exigences de la directive européenne **NIS 2**.*
 > 
 > **En conclusion :**
 > *Avec VIGILO, la cybersécurité ne repose plus seulement sur des logiciels coûteux. Elle transforme chaque employé en une sentinelle active.*

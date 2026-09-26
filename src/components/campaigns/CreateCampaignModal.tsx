@@ -263,7 +263,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                 className="mt-0.5 rounded border-slate-700 text-amber-600 focus:ring-0 cursor-pointer"
               />
               <label htmlFor="admin-validate" className="text-slate-300 leading-relaxed cursor-pointer">
-                <strong className="text-amber-300">Validation administrateur obligatoire :</strong> J'atteste que cette campagne est déployée dans un cadre de sensibilisation autorisé et contrôlé au sein de l'entreprise, conformément aux recommandations de l'ANSSI.
+                <strong className="text-amber-300">Validation administrateur obligatoire :</strong> J'atteste que cette campagne est déployée dans un cadre de sensibilisation autorisé et contrôlé au sein de l'entreprise, conformément aux recommandations de l'ANCy.
               </label>
             </div>
             

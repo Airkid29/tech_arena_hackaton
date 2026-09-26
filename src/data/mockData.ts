@@ -62,7 +62,7 @@ export const INITIAL_SCENARIOS: Scenario[] = [
     </p>
     <table style="width:100%;border-collapse:collapse;margin:18px 0;font-size:13px;background:#f8fafc;">
       <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;">Facture concernée :</td><td style="padding:8px;border:1px solid #e2e8f0;">FR-8942-B (Abonnements fibre & téléphonie)</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;">Montant à régler :</td><td style="padding:8px;border:1px solid #e2e8f0;">2 840,00 € TTC</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;">Montant à régler :</td><td style="padding:8px;border:1px solid #e2e8f0;">2.800.000 F CFA TTC</td></tr>
       <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;">Échéance :</td><td style="padding:8px;border:1px solid #e2e8f0;color:#dc2626;font-weight:bold;">Règlement sous 48 heures</td></tr>
     </table>
     <div style="text-align:center;margin:24px 0;">
@@ -94,7 +94,7 @@ export const INITIAL_SCENARIOS: Scenario[] = [
     body: `<div style="max-width:380px;margin:0 auto;background:#18181b;color:#f4f4f5;padding:20px;border-radius:16px;font-family:sans-serif;">
   <div style="text-align:center;font-size:12px;color:#a1a1aa;margin-bottom:16px;">Message SMS · INFO-COLIS</div>
   <div style="background:#27272a;padding:14px;border-radius:12px;font-size:14px;line-height:1.5;">
-    Votre livraison professionnelle n° CP-981024 n'a pas pu être déposée. Merci de reprogrammer votre passage et régler 1,95 € avant ce soir sur : <br><br>
+    Votre livraison professionnelle n° CP-981024 n'a pas pu être déposée. Merci de reprogrammer votre passage et régler 19.500 F CFA avant ce soir sur : <br><br>
     <a href="#vigilo-trap-link" style="color:#38bdf8;word-break:break-all;">https://suivi-relais-colis24.fr/step?id=9810</a>
   </div>
 </div>`,

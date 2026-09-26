@@ -20,7 +20,7 @@
 
 ## 4:30 - 6:00 : Business Model & Go-to-Market
 - **Cible :** PME de 20 à 250 employés.
-- **Business Model :** SaaS B2B, tarification par utilisateur/mois (ex: 3€/user/mois) avec un modèle Freemium (1 simulation gratuite).
+- **Business Model :** SaaS B2B, tarification par utilisateur/mois (ex: 300.OOO F CFA/user/mois) avec un modèle Freemium (1 simulation gratuite).
 - **Go-to-Market :** Partenariats avec des MSP (Managed Service Providers) et cabinets comptables pour une distribution en marque blanche.
 
 ## 6:00 - 7:00 : L'Équipe et la Roadmap

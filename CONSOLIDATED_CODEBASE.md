@@ -483,7 +483,7 @@ Format JSON strict :
       category: "Fake Invoice",
       situation: {
         context: "Vous recevez un courriel urgent d'un sous-traitant habituel annonçant un changement soudain de domiciliation bancaire pour une facture imminente.",
-        sampleSnippet: "« Suite à une fusion bancaire, merci de virer le solde de 14 250 € sur notre nouvel IBAN sous 48h. »"
+        sampleSnippet: "« Suite à une fusion bancaire, merci de virer le solde de 14 250 F CFA sur notre nouvel IBAN sous 48h. »"
       },
       warningSigns: [
         { sign: "Changement de coordonnées bancaires par email simple", description: "Les escrocs piratent une boîte mail ou usurpent le nom de domaine pour détourner les virements." },
@@ -1069,7 +1069,7 @@ export const translations = {
       exploreFlash: 'Découvrir les Flash Infos',
       finalCtaTitle: 'Prêt à renforcer la résilience de vos collaborateurs ?',
       finalCtaDesc: 'Démarrez votre première simulation en moins de 3 minutes.',
-      rightsReserved: 'Tous droits réservés. Conforme aux recommandations ANSSI pour la sensibilisation en entreprise.',
+      rightsReserved: 'Tous droits réservés. Conforme aux recommandations ANCy pour la sensibilisation en entreprise.',
     },
 
     // WhatsApp & Simulator
@@ -1483,7 +1483,7 @@ export const INITIAL_SCENARIOS: Scenario[] = [
     </p>
     <table style="width:100%;border-collapse:collapse;margin:18px 0;font-size:13px;background:#f8fafc;">
       <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;">Facture concernée :</td><td style="padding:8px;border:1px solid #e2e8f0;">FR-8942-B (Abonnements fibre & téléphonie)</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;">Montant à régler :</td><td style="padding:8px;border:1px solid #e2e8f0;">2 840,00 € TTC</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;">Montant à régler :</td><td style="padding:8px;border:1px solid #e2e8f0;">2 840,00 F CFA TTC</td></tr>
       <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;">Échéance :</td><td style="padding:8px;border:1px solid #e2e8f0;color:#dc2626;font-weight:bold;">Règlement sous 48 heures</td></tr>
     </table>
     <div style="text-align:center;margin:24px 0;">
@@ -1515,7 +1515,7 @@ export const INITIAL_SCENARIOS: Scenario[] = [
     body: `<div style="max-width:380px;margin:0 auto;background:#18181b;color:#f4f4f5;padding:20px;border-radius:16px;font-family:sans-serif;">
   <div style="text-align:center;font-size:12px;color:#a1a1aa;margin-bottom:16px;">Message SMS · INFO-COLIS</div>
   <div style="background:#27272a;padding:14px;border-radius:12px;font-size:14px;line-height:1.5;">
-    Votre livraison professionnelle n° CP-981024 n'a pas pu être déposée. Merci de reprogrammer votre passage et régler 1,95 € avant ce soir sur : <br><br>
+    Votre livraison professionnelle n° CP-981024 n'a pas pu être déposée. Merci de reprogrammer votre passage et régler 1,95 F CFA avant ce soir sur : <br><br>
     <a href="#vigilo-trap-link" style="color:#38bdf8;word-break:break-all;">https://suivi-relais-colis24.fr/step?id=9810</a>
   </div>
 </div>`,
@@ -3374,7 +3374,7 @@ console.log(\`Flux de vigilance actif: \${campaign.telemetryUrl}\`);`,
             <span className="w-2 h-2 rounded-full bg-[#f2620a] animate-pulse" />
             <span className="text-[#fb923c] font-semibold">{t.landing.kicker}</span>
             <span className="text-slate-500">•</span>
-            <span className="text-slate-300">ANSSI & RGPD Compliant</span>
+            <span className="text-slate-300">ANCy & RGPD Compliant</span>
           </div>
 
           {/* Main Headline */}
@@ -3509,7 +3509,7 @@ console.log(\`Flux de vigilance actif: \${campaign.telemetryUrl}\`);`,
         <div className="flex items-center justify-center flex-wrap gap-8 sm:gap-12 px-6 text-slate-400 text-xs font-mono">
           <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-xl">
             <Shield className="w-4 h-4 text-emerald-400" />
-            <span>ANSSI Guidelines Compliant</span>
+            <span>ANCy Guidelines Compliant</span>
           </div>
           <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-xl">
             <Lock className="w-4 h-4 text-cyan-400" />
@@ -3659,7 +3659,7 @@ console.log(\`Flux de vigilance actif: \${campaign.telemetryUrl}\`);`,
 
               <div className="space-y-3 text-xs">
                 <div className="bg-slate-800/80 p-3.5 rounded-xl border border-white/5 text-slate-200 leading-relaxed">
-                  "Bonjour Marc, je suis en réunion client confidentielle. J'ai besoin d'un virement d'acompte urgent de 4 800€ à valider immédiatement par ce lien :"
+                  "Bonjour Marc, je suis en réunion client confidentielle. J'ai besoin d'un virement d'acompte urgent de 4 800F CFA à valider immédiatement par ce lien :"
                 </div>
 
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-start gap-2.5">
@@ -3703,7 +3703,7 @@ console.log(\`Flux de vigilance actif: \${campaign.telemetryUrl}\`);`,
             <div className="text-4xl sm:text-5xl font-extrabold text-cyan-400 font-mono tracking-tight">
               100%
             </div>
-            <p className="mt-2 text-xs sm:text-sm text-slate-400">Conforme Directives ANSSI</p>
+            <p className="mt-2 text-xs sm:text-sm text-slate-400">Conforme Directives ANCy</p>
           </div>
         </div>
       </section>
@@ -3749,7 +3749,7 @@ console.log(\`Flux de vigilance actif: \${campaign.telemetryUrl}\`);`,
           </div>
 
           <div className="flex items-center gap-6 text-slate-400">
-            <span>ANSSI Compliant</span>
+            <span>ANCy Compliant</span>
             <span>RGPD Compliant</span>
             <span>Gophish Native API</span>
           </div>
@@ -3931,7 +3931,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
           <div className="mt-4">
             <div className="text-3xl font-extrabold text-[#fb923c] font-mono">84 / 100</div>
-            <p className="text-xs text-slate-400 mt-1">Niveau Élevé (ANSSI Standard)</p>
+            <p className="text-xs text-slate-400 mt-1">Niveau Élevé (ANCy Standard)</p>
           </div>
         </div>
       </div>
@@ -5012,7 +5012,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                 className="mt-0.5 rounded border-slate-700 text-blue-600 focus:ring-0 cursor-pointer"
               />
               <label htmlFor="admin-validate" className="text-slate-300 leading-relaxed cursor-pointer">
-                <strong className="text-amber-300">Validation administrateur obligatoire :</strong> J'atteste que cette campagne est déployée dans un cadre de sensibilisation autorisé et contrôlé au sein de l'entreprise, conformément aux recommandations de l'ANSSI.
+                <strong className="text-amber-300">Validation administrateur obligatoire :</strong> J'atteste que cette campagne est déployée dans un cadre de sensibilisation autorisé et contrôlé au sein de l'entreprise, conformément aux recommandations de l'ANCy.
               </label>
             </div>
           </div>

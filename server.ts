@@ -439,7 +439,7 @@ Format JSON strict :
       category: "Fake Invoice",
       situation: {
         context: "Vous recevez un courriel urgent d'un sous-traitant habituel annonçant un changement soudain de domiciliation bancaire pour une facture imminente.",
-        sampleSnippet: "« Suite à une fusion bancaire, merci de virer le solde de 14 250 € sur notre nouvel IBAN sous 48h. »"
+        sampleSnippet: "« Suite à une fusion bancaire, merci de virer le solde de 450.000 F CFA sur notre nouvel IBAN sous 48h. »"
       },
       warningSigns: [
         { sign: "Changement de coordonnées bancaires par email simple", description: "Les escrocs piratent une boîte mail ou usurpent le nom de domaine pour détourner les virements." },
