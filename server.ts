@@ -573,14 +573,14 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 // Setup Vite in development or static serve in production
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
     app.use(express.static(path.resolve(__dirname, 'dist')));
     app.get('*', (req, res) => {
       res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
@@ -592,4 +592,9 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+// Export the Express app for Vercel Serverless Functions
+export default app;
