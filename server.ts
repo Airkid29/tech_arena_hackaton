@@ -32,7 +32,7 @@ if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
 }
 
 // RodiumAI fetch helper
-const callRodiumAI = async (prompt: string, model: string = 'gemini-3.8-flash') => {
+const callRodiumAI = async (prompt: string, model: string = 'gemini-3.5-flash') => {
   const rodiumKey = process.env.RODIUM_API_KEY;
   if (!rodiumKey) throw new Error('RODIUM_API_KEY non définie');
 
@@ -200,25 +200,25 @@ Format de réponse attendu en JSON strict sans balises markdown superflues:
       
       if (process.env.RODIUM_API_KEY) {
         try {
-          responseText = await callRodiumAI(prompt, 'gemini-3.8-flash');
+          responseText = await callRodiumAI(prompt, 'gemini-3.5-flash');
           engineUsed = 'rodium-ai-gemini';
         } catch (rodiumErr: any) {
           console.warn('[Rodium Coach] Erreur API Rodium, fallback:', rodiumErr.message);
           if (aiClient) {
             const response = await aiClient.models.generateContent({
-              model: 'gemini-3.8-flash',
+              model: 'gemini-1.5-flash',
               contents: prompt,
               config: { responseMimeType: 'application/json' },
             });
             responseText = response.text || '';
-            engineUsed = 'gemini-3.8-flash';
+            engineUsed = 'gemini-1.5-flash';
           } else {
             throw rodiumErr;
           }
         }
       } else if (aiClient) {
         const response = await aiClient.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-1.5-flash',
           contents: prompt,
           config: { responseMimeType: 'application/json' },
         });
@@ -278,22 +278,22 @@ Fournis une analyse synthétique et percutante au format JSON strict :
 
       if (process.env.RODIUM_API_KEY) {
         try {
-          responseText = await callRodiumAI(prompt, 'gemini-3.8-flash');
+          responseText = await callRodiumAI(prompt, 'gemini-3.5-flash');
           engineUsed = 'rodium-ai-gemini';
         } catch (err) {
           if (aiClient) {
             const response = await aiClient.models.generateContent({
-              model: 'gemini-3.8-flash',
+              model: 'gemini-1.5-flash',
               contents: prompt,
               config: { responseMimeType: 'application/json' },
             });
             responseText = response.text || '';
-            engineUsed = 'gemini-3.8-flash';
+            engineUsed = 'gemini-1.5-flash';
           }
         }
       } else if (aiClient) {
         const response = await aiClient.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-1.5-flash',
           contents: prompt,
           config: { responseMimeType: 'application/json' },
         });
@@ -400,22 +400,22 @@ Format JSON strict :
 
       if (process.env.RODIUM_API_KEY) {
         try {
-          responseText = await callRodiumAI(prompt, 'gemini-3.8-flash');
+          responseText = await callRodiumAI(prompt, 'gemini-3.5-flash');
           engineUsed = 'rodium-ai-gemini';
         } catch (err) {
           if (aiClient) {
             const response = await aiClient.models.generateContent({
-              model: 'gemini-3.8-flash',
+              model: 'gemini-1.5-flash',
               contents: prompt,
               config: { responseMimeType: 'application/json' },
             });
             responseText = response.text || '';
-            engineUsed = 'gemini-3.8-flash';
+            engineUsed = 'gemini-1.5-flash';
           }
         }
       } else if (aiClient) {
         const response = await aiClient.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-1.5-flash',
           contents: prompt,
           config: { responseMimeType: 'application/json' },
         });

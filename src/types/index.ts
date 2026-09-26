@@ -9,7 +9,7 @@ export type ScenarioCategory =
   | 'QR Code (Quishing)';
 export type DifficultyLevel = 'Facile' | 'Moyen' | 'Difficile';
 export type CampaignStatus = 'brouillon' | 'planifiée' | 'en_cours' | 'terminée';
-export type AppViewMode = 'landing' | 'app';
+export type AppViewMode = 'landing' | 'app' | 'login';
 
 export interface FlashArticle {
   id: string;

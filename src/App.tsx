@@ -15,6 +15,7 @@ import { SettingsView } from './components/settings/SettingsView';
 import { FlashNewsView } from './components/flash-news/FlashNewsView';
 import { EmployeeSimulatorModal } from './components/employee-simulator/EmployeeSimulatorModal';
 import { LandingPage } from './components/landing/LandingPage';
+import { AdminLogin } from './components/auth/AdminLogin';
 import {
   INITIAL_CAMPAIGNS,
   INITIAL_SCENARIOS,
@@ -313,14 +314,14 @@ export default function App() {
     return (
       <div className={isDark ? 'dark' : ''}>
         <LandingPage
-          onEnterDashboard={() => setViewMode('app')}
+          onEnterDashboard={() => setViewMode('login')}
           onOpenLiveSimulator={() => handleOpenSimulator()}
           onExploreTrainings={() => {
-            setViewMode('app');
+            setViewMode('login');
             setActiveTab('training');
           }}
           onOpenFlashNews={() => {
-            setViewMode('app');
+            setViewMode('login');
             setActiveTab('flash-news');
           }}
           language={language}
@@ -355,6 +356,17 @@ export default function App() {
             }}
           />
         )}
+      </div>
+    );
+  }
+
+  if (viewMode === 'login') {
+    return (
+      <div className={isDark ? 'dark' : ''}>
+        <AdminLogin
+          onLogin={() => setViewMode('app')}
+          onBack={() => setViewMode('landing')}
+        />
       </div>
     );
   }
