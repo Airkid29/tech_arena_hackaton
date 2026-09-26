@@ -82,14 +82,30 @@ Au **Togo** et en **Afrique de l’Ouest francophone**, le risque n’est pas se
 
 Prix psychologique **inférieur au coût d’une seule fraude** (souvent 500 000 – 5 000 000 FCFA).
 
-| Offre | Cible | Prix / mois | Inclus |
-|-------|--------|-------------|--------|
-| **Starter** | 5–15 users | **15 000 FCFA** (~23 €) | 1 campagne/mois, email, 3 scénarios, stats basiques |
-| **PME** | 16–50 users | **1 500 FCFA / user** (min. 25 000) | Email + WhatsApp simulé, Coach IA, 7 modules, re-test |
-| **Business** | 51–150 users | **1 200 FCFA / user** (min. 60 000) | Tout PME + Flash News, annuaire, export PDF, support prioritaire |
-| **Partenaire MSP** | Revendeur | **Wholesale −25 %** | Multi-tenant, logo client, facturation centralisée |
+**Comment lire la grille :** le client paie toujours un **montant mensuel total** (comme une facture CinetPay / virement). Le « FCFA / salarié » sert uniquement à **calculer** ce total :  
+`facture = nombre de salariés × tarif unitaire`, avec un **minimum** (et parfois un plafond) par palier.  
+→ Ce ne sont **pas** des chiffres comparables : **15 000 FCFA/mois** (forfait TPE) vs **1 500 FCFA/salarié** (unité de calcul PME/Business), qui donne par ex. **120 000 FCFA/mois** pour ~80 salariés — pas « 15 000 vs 1 500 » sur la même ligne de facture.
 
-**Équivalent EUR (communication internationale) :** ~2–3 € / user / mois PME — **40 à 60 % sous** les grands acteurs US.
+#### Paliers (abonnement mensuel)
+
+| Offre | Effectif | **Facture mensuelle (TTC)** | Règle de calcul | Inclus |
+|-------|----------|-----------------------------|-----------------|--------|
+| **Starter** | 5–15 salariés | **15 000 FCFA / mois** (forfait fixe) | Prix plat, quelle que soit la taille entre 5 et 15 | 1 campagne/mois, email, 3 scénarios, stats basiques |
+| **PME** | 16–50 salariés | **50 000 – 100 000 FCFA / mois** | **2 000 FCFA × nb salariés**, minimum **50 000**, maximum **100 000** | Email + WhatsApp simulé, Coach IA, 7 modules, re-test |
+| **Business** | 51–150 salariés | **120 000 – 225 000 FCFA / mois** | **1 500 FCFA × nb salariés**, minimum **120 000**, maximum **225 000** | Tout PME + Flash News, annuaire, export PDF, support prioritaire |
+| **Partenaire MSP** | Revendeur | **−25 %** sur les paliers ci-dessus | Facturation centralisée, marque blanche | Multi-tenant, logo client |
+
+#### Exemples concrets (ce que le client voit sur la facture)
+
+| Entreprise type | Salariés | Offre | Calcul | **À payer / mois** |
+|-----------------|----------|-------|--------|---------------------|
+| Boutique / TPE | 10 | Starter | Forfait | **15 000 FCFA** |
+| PME Lomé | 25 | PME | 25 × 2 000 | **50 000 FCFA** |
+| PME en croissance | 40 | PME | 40 × 2 000 | **80 000 FCFA** |
+| ETI / groupe local | 60 | Business | 60 × 1 500 = 90 000 → **plancher 120 000** | **120 000 FCFA** |
+| ETI | 100 | Business | 100 × 1 500 | **150 000 FCFA** |
+
+**Équivalent EUR (ordre de grandeur) :** 15 k ≈ 23 € · 50 k ≈ 76 € · 120 k ≈ 183 € / mois — **40 à 60 % sous** les grands acteurs US à effectif comparable.
 
 ### 5.3 Freemium & pilote (go-to-market hackathon → terrain)
 
@@ -101,11 +117,11 @@ Prix psychologique **inférieur au coût d’une seule fraude** (souvent 500 000
 
 | Métrique | Hypothèse |
 |----------|-----------|
-| **ARPU** moyen | 45 000 FCFA / mois (~69 €) |
-| **Coût variable** (IA Gemini, SMS/WhatsApp API, hébergement) | 8 000 – 12 000 FCFA / client / mois |
+| **ARPU** moyen (mix Starter + PME) | ~55 000 FCFA / mois (~84 €) |
+| **Coût variable** (IA Gemini, SMS/WhatsApp API, hébergement) | 8 000 – 15 000 FCFA / client / mois |
 | **Marge brute SaaS** | ~65–75 % |
 | **CAC** (partenaire comptable) | 30 000 – 80 000 FCFA |
-| **LTV** (24 mois, churn 5 % / mois après an 1) | ~540 000 FCFA |
+| **LTV** (24 mois, churn 5 % / mois après an 1) | ~660 000 FCFA (sur base ARPU 55 k) |
 | **LTV/CAC** | &gt; 5 visé via canal partenaire |
 
 ---
@@ -154,8 +170,8 @@ Prix psychologique **inférieur au coût d’une seule fraude** (souvent 500 000
 ## 10. Pitch jury — chiffres à retenir (30 secondes)
 
 - **Cible :** 15–150 employés, Togo puis UEMOA.  
-- **Prix :** dès **15 000 FCFA/mois** ; ~**1 500 FCFA/user** en PME.  
-- **ROI :** une fraude évitée (&gt; 500 k FCFA) &gt; **3 ans** d’abonnement typique.  
+- **Prix :** **15 000 FCFA/mois** (Starter) · **50 000–100 000** (PME) · **à partir de 120 000 FCFA/mois** (Business).  
+- **ROI :** une fraude évitée (&gt; 500 k FCFA) &gt; **1 an** d’abonnement PME typique (~50–80 k/mois).  
 - **Différenciation :** boucle 5 étapes + **WhatsApp** + Coach IA + **2 min** de formation.  
 - **GTM :** comptables, MSP, banques — pas vente directe pure au début.
 
