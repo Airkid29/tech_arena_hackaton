@@ -1069,7 +1069,7 @@ export const translations = {
       exploreFlash: 'Découvrir les Flash Infos',
       finalCtaTitle: 'Prêt à renforcer la résilience de vos collaborateurs ?',
       finalCtaDesc: 'Démarrez votre première simulation en moins de 3 minutes.',
-      rightsReserved: 'Tous droits réservés. Conforme aux recommandations ANSSI pour la sensibilisation en entreprise.',
+      rightsReserved: 'Tous droits réservés. Conforme aux recommandations ANCy pour la sensibilisation en entreprise.',
     },
 
     // WhatsApp & Simulator
@@ -3374,7 +3374,7 @@ console.log(\`Flux de vigilance actif: \${campaign.telemetryUrl}\`);`,
             <span className="w-2 h-2 rounded-full bg-[#f2620a] animate-pulse" />
             <span className="text-[#fb923c] font-semibold">{t.landing.kicker}</span>
             <span className="text-slate-500">•</span>
-            <span className="text-slate-300">ANSSI & RGPD Compliant</span>
+            <span className="text-slate-300">ANCy & RGPD Compliant</span>
           </div>
 
           {/* Main Headline */}
@@ -3509,7 +3509,7 @@ console.log(\`Flux de vigilance actif: \${campaign.telemetryUrl}\`);`,
         <div className="flex items-center justify-center flex-wrap gap-8 sm:gap-12 px-6 text-slate-400 text-xs font-mono">
           <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-xl">
             <Shield className="w-4 h-4 text-emerald-400" />
-            <span>ANSSI Guidelines Compliant</span>
+            <span>ANCy Guidelines Compliant</span>
           </div>
           <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-xl">
             <Lock className="w-4 h-4 text-cyan-400" />
@@ -3703,7 +3703,7 @@ console.log(\`Flux de vigilance actif: \${campaign.telemetryUrl}\`);`,
             <div className="text-4xl sm:text-5xl font-extrabold text-cyan-400 font-mono tracking-tight">
               100%
             </div>
-            <p className="mt-2 text-xs sm:text-sm text-slate-400">Conforme Directives ANSSI</p>
+            <p className="mt-2 text-xs sm:text-sm text-slate-400">Conforme Directives ANCy</p>
           </div>
         </div>
       </section>
@@ -3749,7 +3749,7 @@ console.log(\`Flux de vigilance actif: \${campaign.telemetryUrl}\`);`,
           </div>
 
           <div className="flex items-center gap-6 text-slate-400">
-            <span>ANSSI Compliant</span>
+            <span>ANCy Compliant</span>
             <span>RGPD Compliant</span>
             <span>Gophish Native API</span>
           </div>
@@ -3931,7 +3931,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
           <div className="mt-4">
             <div className="text-3xl font-extrabold text-[#fb923c] font-mono">84 / 100</div>
-            <p className="text-xs text-slate-400 mt-1">Niveau Élevé (ANSSI Standard)</p>
+            <p className="text-xs text-slate-400 mt-1">Niveau Élevé (ANCy Standard)</p>
           </div>
         </div>
       </div>
@@ -5012,7 +5012,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                 className="mt-0.5 rounded border-slate-700 text-blue-600 focus:ring-0 cursor-pointer"
               />
               <label htmlFor="admin-validate" className="text-slate-300 leading-relaxed cursor-pointer">
-                <strong className="text-amber-300">Validation administrateur obligatoire :</strong> J'atteste que cette campagne est déployée dans un cadre de sensibilisation autorisé et contrôlé au sein de l'entreprise, conformément aux recommandations de l'ANSSI.
+                <strong className="text-amber-300">Validation administrateur obligatoire :</strong> J'atteste que cette campagne est déployée dans un cadre de sensibilisation autorisé et contrôlé au sein de l'entreprise, conformément aux recommandations de l'ANCy.
               </label>
             </div>
           </div>

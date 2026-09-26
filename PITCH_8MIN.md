@@ -13,7 +13,7 @@
 [01:00 - 02:30] 💡 2. LA SOLUTION VIGILO & LA BOUCLE EN 5 ÉTAPES
 [02:30 - 05:00] 🖥️ 3. DÉMONSTRATION INTERACTIVE EN DIRECT (DEMO LIVE)
 [05:00 - 06:30] 📊 4. ROI, BUSINESS MODEL & DIFFÉRENCIATION (vs KnowBe4)
-[06:30 - 08:00] 🛡️ 5. CONFORMITÉ ANSSI / RGPD & CONCLUSION PERCUTANTE
+[06:30 - 08:00] 🛡️ 5. CONFORMITÉ ANCy / RGPD & CONCLUSION PERCUTANTE
 ```
 
 ---
@@ -78,10 +78,10 @@
 
 ---
 
-### 🛡️ MINUTE 6:30 - 8:00 | Conformité ANSSI / RGPD & Conclusion
+### 🛡️ MINUTE 6:30 - 8:00 | Conformité ANCy / RGPD & Conclusion
 
 > *"Sur le plan réglementaire, VIGILO respecte strictement le **RGPD (Article 32)** : pas de stigmatisation individuelle, pseudonymisation des cohortes, et données hébergées en Europe.*
-> *De plus, VIGILO permet aux PME de se conformer directement aux **directives de l'ANSSI** et aux exigences de la directive européenne **NIS 2**.*
+> *De plus, VIGILO permet aux PME de se conformer directement aux **directives de l'ANCy** et aux exigences de la directive européenne **NIS 2**.*
 > 
 > **En conclusion :**
 > *Avec VIGILO, la cybersécurité ne repose plus seulement sur des logiciels coûteux. Elle transforme chaque employé en une sentinelle active.*

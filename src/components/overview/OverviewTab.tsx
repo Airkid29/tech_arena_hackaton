@@ -164,7 +164,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
           <div className="mt-4">
             <div className="text-3xl font-extrabold text-[#fb923c] font-mono">84 / 100</div>
-            <p className="text-xs text-slate-400 mt-1">Niveau Élevé (ANSSI Standard)</p>
+            <p className="text-xs text-slate-400 mt-1">Niveau Élevé (ANCy Standard)</p>
           </div>
         </div>
       </div>

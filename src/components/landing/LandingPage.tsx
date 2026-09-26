@@ -97,7 +97,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="pt-24 pb-20 px-6 max-w-5xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--card)] border border-[var(--card-border)] text-[var(--muted-foreground)] text-xs font-medium mb-8">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-          Conforme aux recommandations de l'ANSSI pour les PME
+          Conforme aux recommandations de l'ANCy pour les PME
         </div>
 
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] text-[var(--foreground)] max-w-4xl mx-auto">
