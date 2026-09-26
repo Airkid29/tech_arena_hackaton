@@ -316,7 +316,7 @@ export default function App() {
   // 1. IF VIEW MODE IS LANDING: Display clean, non-AI-slop landing page with working i18n & theme
   if (viewMode === 'landing') {
     return (
-      <div className={isDark ? 'dark' : ''}>
+      <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
         <LandingPage
           onEnterDashboard={() => setViewMode('login')}
           onOpenLiveSimulator={() => handleOpenSimulator()}
@@ -366,7 +366,7 @@ export default function App() {
 
   if (viewMode === 'login') {
     return (
-      <div className={isDark ? 'dark' : ''}>
+      <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
         <AdminLogin
           onLogin={() => setViewMode('app')}
           onBack={() => setViewMode('landing')}
@@ -377,9 +377,12 @@ export default function App() {
 
   // 2. APP VIEW MODE (Full-featured Console & Resilience Engine)
   return (
-    <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white transition-colors ${
-      isDark ? 'dark bg-[var(--background)] text-[var(--foreground)]' : 'bg-[var(--background)] text-[var(--foreground)]'
-    }`}>
+    <div
+      data-vigilo-theme={theme}
+      className={`min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white transition-colors ${
+        isDark ? 'dark bg-[var(--background)] text-[var(--foreground)]' : 'bg-[var(--background)] text-[var(--foreground)]'
+      }`}
+    >
       {/* Top Header */}
       <Navbar
         activeTab={activeTab}

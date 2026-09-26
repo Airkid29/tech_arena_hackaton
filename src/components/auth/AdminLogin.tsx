@@ -75,7 +75,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, onBack }) => {
           </div>
 
           {error && (
-            <div className="text-xs font-medium text-red-400 text-center bg-red-950/20 py-2.5 rounded-lg border border-red-900/30">
+            <div className="text-xs font-medium text-red-700 dark:text-red-400 text-center bg-red-100 dark:bg-red-950/20 py-2.5 rounded-lg border border-red-300 dark:border-red-900/30">
               {error}
             </div>
           )}

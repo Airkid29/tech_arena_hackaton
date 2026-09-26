@@ -4,16 +4,51 @@
 
 @layer base {
   :root {
+    color-scheme: light;
+    --background: #f4f6f9;
+    --foreground: #0c1222;
+    --card: #ffffff;
+    --card-border: #c5cdd8;
+    --primary: #c2410c;
+    --primary-hover: #9a3412;
+    --muted: #e8edf3;
+    --muted-foreground: #3d4a5c;
+    --accent: #dce3ec;
+    --surface-inset: #eef2f7;
+    --surface-toolbar: #ffffff;
+    --sidebar-bg: #ffffff;
+    --sidebar-fg: #1e293b;
+    --sidebar-muted: #475569;
+    --success: #047857;
+    --success-bright: #059669;
+    --danger-bright: #dc2626;
+    --info-bright: #2563eb;
+    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 16px rgba(15, 23, 42, 0.06);
+    --shadow-card-hover: 0 4px 24px rgba(15, 23, 42, 0.12);
+  }
+
+  .dark {
     color-scheme: dark;
     --background: #000000;
     --foreground: #ededed;
     --card: #0a0a0a;
-    --card-border: rgba(255, 255, 255, 0.1);
+    --card-border: rgba(255, 255, 255, 0.12);
     --primary: #f2620a;
     --primary-hover: #d95809;
     --muted: #171717;
     --muted-foreground: #a1a1aa;
     --accent: #171717;
+    --surface-inset: rgba(255, 255, 255, 0.03);
+    --surface-toolbar: rgba(15, 23, 42, 0.8);
+    --sidebar-bg: #0a0a0a;
+    --sidebar-fg: #e2e8f0;
+    --sidebar-muted: #94a3b8;
+    --success: #34d399;
+    --success-bright: #34d399;
+    --danger-bright: #fb7185;
+    --info-bright: #60a5fa;
+    --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+    --shadow-card-hover: 0 8px 30px rgba(0, 0, 0, 0.5);
   }
 
   body {
@@ -25,50 +60,53 @@
     transition: background-color 0.2s ease, color 0.2s ease;
     overflow-x: hidden;
   }
-
-  /* Light mode is minimal */
-  html:not(.dark) body {
-    --background: #ffffff;
-    --foreground: #0a0a0a;
-    --card: #ffffff;
-    --card-border: rgba(0, 0, 0, 0.1);
-    --primary: #ea580c;
-    --primary-hover: #c2410c;
-    --muted: #f4f4f5;
-    --muted-foreground: #71717a;
-    --accent: #f4f4f5;
-  }
 }
 
-/* Premium minimalist grid - Vercel/Linear style */
+/* Premium minimalist grid */
 .vigilo-grid-pattern {
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
   background-size: 32px 32px;
   mask-image: radial-gradient(circle at center, black, transparent 80%);
   -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
 }
 
-/* Very subtle glows instead of aggressive ones */
+.dark .vigilo-grid-pattern {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
 .vigilo-orange-glow {
+  background: radial-gradient(circle, rgba(234, 88, 12, 0.12) 0%, transparent 60%);
+}
+
+.dark .vigilo-orange-glow {
   background: radial-gradient(circle, rgba(242, 98, 10, 0.08) 0%, transparent 60%);
 }
 
 .vigilo-cyan-glow {
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 60%);
+}
+
+.dark .vigilo-cyan-glow {
   background: radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, transparent 60%);
 }
 
-/* Sophisticated Cards */
 .vigilo-card {
   background-color: var(--card);
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-card);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .vigilo-card:hover {
+  border-color: var(--card-border);
+}
+
+.dark .vigilo-card:hover {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
@@ -83,10 +121,9 @@
 .vigilo-card-interactive:hover {
   border-color: var(--primary);
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-card-hover);
 }
 
-/* Refined Buttons */
 .vigilo-btn-primary {
   background-color: var(--foreground);
   color: var(--background);
@@ -96,7 +133,7 @@
 }
 
 .vigilo-btn-primary:hover {
-  opacity: 0.9;
+  opacity: 0.92;
   transform: scale(0.98);
 }
 
@@ -105,13 +142,13 @@
   color: #ffffff;
   font-weight: 500;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(242, 98, 10, 0.2);
+  box-shadow: 0 2px 10px rgba(234, 88, 12, 0.25);
   transition: all 0.2s ease;
 }
 
 .vigilo-btn-orange:hover {
   background-color: var(--primary-hover);
-  box-shadow: 0 4px 15px rgba(242, 98, 10, 0.3);
+  box-shadow: 0 4px 15px rgba(234, 88, 12, 0.35);
   transform: translateY(-1px);
 }
 
@@ -126,10 +163,13 @@
 
 .vigilo-btn-secondary:hover {
   background-color: var(--muted);
+  border-color: var(--card-border);
+}
+
+.dark .vigilo-btn-secondary:hover {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Pills / Badges */
 .vigilo-pill {
   display: inline-flex;
   align-items: center;
@@ -144,26 +184,117 @@
 }
 
 .vigilo-pill-orange {
-  background-color: rgba(242, 98, 10, 0.1);
-  border: 1px solid rgba(242, 98, 10, 0.2);
+  background-color: rgba(234, 88, 12, 0.12);
+  border: 1px solid rgba(234, 88, 12, 0.28);
   color: var(--primary);
 }
 
+.dark .vigilo-pill-orange {
+  background-color: rgba(242, 98, 10, 0.1);
+  border: 1px solid rgba(242, 98, 10, 0.2);
+  color: #fb923c;
+}
+
 .vigilo-pill-emerald {
+  background-color: rgba(5, 150, 105, 0.12);
+  border: 1px solid rgba(5, 150, 105, 0.28);
+  color: var(--success);
+}
+
+.dark .vigilo-pill-emerald {
   background-color: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.2);
   color: #34d399;
 }
 
 .vigilo-pill-cyan {
+  background-color: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  color: #1d4ed8;
+}
+
+.dark .vigilo-pill-cyan {
   background-color: rgba(6, 182, 212, 0.1);
   border: 1px solid rgba(6, 182, 212, 0.2);
   color: #38bdf8;
 }
 
-/* Typography Enhancements */
+/* Semantic console surfaces (theme-aware) */
+.vigilo-page-title {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.vigilo-text-muted {
+  color: var(--muted-foreground);
+}
+
+.vigilo-toolbar {
+  background-color: var(--surface-toolbar);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(12px);
+}
+
+.dark .vigilo-toolbar {
+  background-color: rgba(15, 23, 42, 0.8);
+}
+
+.vigilo-inset {
+  background-color: var(--surface-inset);
+  border: 1px solid var(--card-border);
+}
+
+.vigilo-divider {
+  border-color: var(--card-border);
+}
+
+.vigilo-chrome-btn {
+  border: 1px solid var(--card-border);
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.vigilo-chrome-btn:hover {
+  color: var(--foreground);
+  background-color: var(--accent);
+}
+
+.dark .vigilo-chrome-btn {
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark .vigilo-chrome-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.vigilo-input {
+  background-color: var(--card);
+  border: 1px solid var(--card-border);
+  color: var(--foreground);
+}
+
+.vigilo-input::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.75;
+}
+
+.vigilo-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.dark .vigilo-input {
+  background-color: rgba(2, 6, 23, 0.8);
+}
+
 .vigilo-glow-text {
   color: var(--foreground);
+}
+
+.dark .vigilo-glow-text {
   text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
 }
 
@@ -171,7 +302,96 @@
   color: var(--primary);
 }
 
-/* Custom sleek scrollbar */
+.vigilo-stat-accent-emerald {
+  color: var(--success-bright);
+}
+
+.vigilo-stat-accent-rose {
+  color: var(--danger-bright);
+}
+
+.vigilo-stat-accent-blue {
+  color: var(--info-bright);
+}
+
+/* Light mode: fix legacy dark-only Tailwind across console + modals */
+[data-vigilo-theme='light'] .text-white {
+  color: var(--foreground);
+}
+
+[data-vigilo-theme='light'] .text-slate-200,
+[data-vigilo-theme='light'] .text-slate-300 {
+  color: var(--muted-foreground);
+}
+
+[data-vigilo-theme='light'] .text-slate-400 {
+  color: var(--muted-foreground);
+}
+
+[data-vigilo-theme='light'] .text-emerald-400 {
+  color: var(--success);
+}
+
+[data-vigilo-theme='light'] .text-amber-400 {
+  color: #b45309;
+}
+
+[data-vigilo-theme='light'] .text-rose-400 {
+  color: #b91c1c;
+}
+
+[data-vigilo-theme='light'] .text-blue-400 {
+  color: #1d4ed8;
+}
+
+[data-vigilo-theme='light'] .border-white\/10,
+[data-vigilo-theme='light'] .border-white\/15 {
+  border-color: var(--card-border);
+}
+
+[data-vigilo-theme='light'] .bg-slate-900,
+[data-vigilo-theme='light'] .bg-slate-900\/80,
+[data-vigilo-theme='light'] .bg-slate-900\/90 {
+  background-color: var(--muted);
+}
+
+[data-vigilo-theme='light'] .bg-slate-950,
+[data-vigilo-theme='light'] .bg-slate-950\/60,
+[data-vigilo-theme='light'] .bg-slate-950\/80 {
+  background-color: var(--surface-inset);
+}
+
+[data-vigilo-theme='light'] .bg-white\/5,
+[data-vigilo-theme='light'] .bg-white\/\[0\.02\],
+[data-vigilo-theme='light'] .bg-white\/\[0\.03\] {
+  background-color: var(--surface-inset);
+}
+
+[data-vigilo-theme='light'] .vigilo-btn-orange,
+[data-vigilo-theme='light'] button.vigilo-btn-orange,
+[data-vigilo-theme='light'] button.bg-emerald-600,
+[data-vigilo-theme='light'] button.bg-emerald-500,
+[data-vigilo-theme='light'] button.bg-blue-600,
+[data-vigilo-theme='light'] button.bg-blue-500,
+[data-vigilo-theme='light'] button.bg-indigo-600,
+[data-vigilo-theme='light'] button.bg-indigo-500 {
+  color: #ffffff !important;
+}
+
+/* Primary-filled controls (lang switcher, etc.) keep white label */
+[data-vigilo-theme='light'] button.bg-\[var\(--primary\)\] {
+  color: #ffffff !important;
+}
+
+[data-vigilo-theme='light'] .hover\:text-white:hover {
+  color: var(--foreground);
+}
+
+/* Keep employee simulator preview intentionally dark (realistic channel UI) */
+[data-vigilo-theme='light'] [data-vigilo-simulator-chrome] .text-white {
+  color: #f8fafc;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -184,7 +404,7 @@
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--muted-foreground);
 }
 
 @keyframes pulse-slow {

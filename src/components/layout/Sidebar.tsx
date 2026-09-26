@@ -29,7 +29,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onGoToLanding,
   activeCampaignCount,
   language,
-  theme,
 }) => {
   const t = translations[language];
 
@@ -91,9 +90,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-64 border-r border-[var(--card-border)] bg-[var(--card)] text-slate-200 flex flex-col justify-between shrink-0 select-none transition-all">
+    <aside
+      className="w-64 border-r border-[var(--card-border)] flex flex-col justify-between shrink-0 select-none transition-all"
+      style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-fg)' }}
+    >
       <div className="p-4 space-y-6">
-        {/* Navigation list */}
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -102,17 +103,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer border ${
                   isActive
-                    ? 'bg-[#f2620a]/15 text-white border border-[#f2620a]/40 shadow-[0_0_15px_rgba(242,98,10,0.15)] font-semibold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
+                    ? 'bg-[var(--primary)]/12 text-[var(--foreground)] border-[var(--primary)]/35 font-semibold shadow-sm'
+                    : 'text-[var(--sidebar-muted)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
-                    className={`w-4 h-4 ${
-                      isActive ? 'text-[#fb923c]' : 'text-slate-400'
-                    }`}
+                    className={`w-4 h-4 ${isActive ? 'text-[var(--primary)]' : 'text-[var(--sidebar-muted)]'}`}
                   />
                   <span>{item.label}</span>
                 </div>
@@ -120,8 +119,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
                       item.badge === 'Nouveau' || item.badge === 'New' || item.badge === 'RodiumAI'
-                        ? 'bg-[#f2620a]/20 text-[#fb923c] border border-[#f2620a]/30'
-                        : 'bg-white/10 text-slate-300 border border-white/10'
+                        ? 'vigilo-pill-orange'
+                        : 'vigilo-pill'
                     }`}
                   >
                     {item.badge}
@@ -132,25 +131,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        {/* Continuous resilience formula box */}
-        <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-md text-xs space-y-2">
-          <div className="flex items-center gap-2 font-semibold text-white">
-            <ShieldCheck className="w-4 h-4 text-[#fb923c]" />
+        <div className="p-3.5 rounded-xl border border-[var(--card-border)] bg-[var(--surface-inset)] text-xs space-y-2">
+          <div className="flex items-center gap-2 font-semibold text-[var(--foreground)]">
+            <ShieldCheck className="w-4 h-4 text-[var(--primary)]" />
             <span>Cycle Continu VIGILO</span>
           </div>
-          <p className="text-[11px] leading-relaxed text-slate-400 font-mono">
+          <p className="text-[11px] leading-relaxed text-[var(--muted-foreground)] font-mono">
             {t.sloganShort}
           </p>
         </div>
       </div>
 
-      {/* Footer link to landing */}
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t border-[var(--card-border)]">
         <button
           onClick={onGoToLanding}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-medium transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-[var(--card-border)] bg-[var(--muted)] hover:bg-[var(--accent)] text-[var(--foreground)] text-xs font-medium transition-all cursor-pointer"
         >
-          <LayoutTemplate className="w-4 h-4 text-[#fb923c]" />
+          <LayoutTemplate className="w-4 h-4 text-[var(--primary)]" />
           <span>{t.nav.landing}</span>
         </button>
       </div>
