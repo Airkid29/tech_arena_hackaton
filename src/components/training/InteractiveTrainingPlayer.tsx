@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   HelpCircle,
-  ShieldCheck,
   RotateCcw,
 } from 'lucide-react';
 import { TrainingModule } from '../../types';
@@ -25,16 +24,15 @@ export const InteractiveTrainingPlayer: React.FC<InteractiveTrainingPlayerProps>
   onComplete,
   onNavigateToReTest,
 }) => {
-  // Steps: 0: Situation, 1: Signes d'alerte, 2: Bonne réaction, 3: Mini-question, 4: Terminé
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
   const [isAnswerSubmitted, setIsAnswerSubmitted] = useState<boolean>(false);
 
   const stepsMeta = [
-    { title: '1. Situation', subtitle: 'Mise en contexte réelle' },
-    { title: "2. Signes d'alerte", subtitle: 'Red flags repérables' },
-    { title: '3. Bonne réaction', subtitle: 'Procédure recommandée' },
-    { title: '4. Mini-quiz', subtitle: 'Validation pratique' },
+    { title: '1. Situation', subtitle: 'Contexte' },
+    { title: "2. Alertes", subtitle: 'Red flags' },
+    { title: '3. Réaction', subtitle: 'Procédure' },
+    { title: '4. Quiz', subtitle: 'Validation' },
   ];
 
   const handleNext = () => {
@@ -42,7 +40,7 @@ export const InteractiveTrainingPlayer: React.FC<InteractiveTrainingPlayerProps>
       setCurrentStep(currentStep + 1);
     } else if (currentStep === 3 && isAnswerSubmitted) {
       onComplete(module.id);
-      setCurrentStep(4); // Finished step
+      setCurrentStep(4);
     }
   };
 
@@ -61,252 +59,237 @@ export const InteractiveTrainingPlayer: React.FC<InteractiveTrainingPlayerProps>
   const isQuizCorrect =
     selectedQuizAnswer !== null && selectedQuizAnswer === module.miniQuiz.correctIndex;
 
+  const panelClass = 'p-4 rounded-xl border border-[var(--card-border)] bg-[var(--surface-inset)]';
+  const labelMuted = 'text-xs font-semibold text-[var(--muted-foreground)]';
+  const bodyText = 'text-sm text-[var(--foreground)] leading-relaxed';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl bg-[#0d131f] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-6 flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">
-              <GraduationCap className="w-4 h-4 text-blue-400" />
+    <div
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-sm p-0 sm:p-4"
+      data-vigilo-modal
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="training-player-title"
+    >
+      <div className="w-full sm:max-w-3xl max-h-[96dvh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-[var(--card-border)] bg-[var(--card)] shadow-2xl overflow-hidden">
+        <div className="shrink-0 p-4 sm:p-5 border-b border-[var(--card-border)] bg-[var(--muted)] flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-[var(--primary)]/15 border border-[var(--primary)]/30 flex items-center justify-center shrink-0">
+              <GraduationCap className="w-4 h-4 text-[var(--primary)]" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase text-blue-400 bg-blue-950 px-1.5 py-0.5 rounded border border-blue-800">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-mono uppercase text-[var(--primary)] bg-[var(--primary)]/10 px-1.5 py-0.5 rounded border border-[var(--primary)]/25">
                   Micro-formation {module.durationMinutes} min
                 </span>
-                <span className="text-xs text-slate-400">· {module.category}</span>
+                <span className="text-xs text-[var(--muted-foreground)]">· {module.category}</span>
               </div>
-              <h2 className="text-sm font-bold text-white mt-0.5">{module.title}</h2>
+              <h2 id="training-player-title" className="text-sm sm:text-base font-bold text-[var(--foreground)] mt-1 line-clamp-2">
+                {module.title}
+              </h2>
             </div>
           </div>
-
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* 4-Step Progress indicator */}
-        <div className="grid grid-cols-4 border-b border-slate-800 bg-slate-950/40 text-xs">
+        <div className="shrink-0 flex overflow-x-auto border-b border-[var(--card-border)] bg-[var(--background)] text-xs scrollbar-thin">
           {stepsMeta.map((s, idx) => {
             const isActive = currentStep === idx;
             const isCompleted = currentStep > idx;
             return (
               <div
                 key={idx}
-                className={`p-3 border-r last:border-r-0 border-slate-800/80 transition-all ${
+                className={`min-w-[25%] flex-1 p-2.5 sm:p-3 border-r last:border-r-0 border-[var(--card-border)] transition-all ${
                   isActive
-                    ? 'bg-blue-600/10 border-b-2 border-b-blue-500'
+                    ? 'bg-[var(--primary)]/10 border-b-2 border-b-[var(--primary)]'
                     : isCompleted
-                    ? 'bg-slate-900/40 text-slate-300'
-                    : 'text-slate-500'
+                      ? 'bg-emerald-500/10'
+                      : ''
                 }`}
               >
-                <div className={`font-semibold ${isActive ? 'text-blue-400' : isCompleted ? 'text-emerald-400' : ''}`}>
+                <div
+                  className={`font-semibold truncate ${
+                    isActive
+                      ? 'text-[var(--primary)]'
+                      : isCompleted
+                        ? 'text-emerald-700 dark:text-emerald-400'
+                        : 'text-[var(--muted-foreground)]'
+                  }`}
+                >
                   {s.title}
                 </div>
-                <div className="text-[10px] text-slate-500 hidden sm:block truncate">{s.subtitle}</div>
+                <div className="text-[10px] text-[var(--muted-foreground)] hidden sm:block truncate">{s.subtitle}</div>
               </div>
             );
           })}
         </div>
 
-        {/* Main Content Area */}
-        <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6">
-          {/* STEP 1: SITUATION */}
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 space-y-5 text-sm">
           {currentStep === 0 && (
-            <div className="space-y-5 animate-in fade-in duration-200">
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-                <div className="text-slate-400 font-medium">Mise en situation vécue au quotidien :</div>
-                <p className="text-sm text-slate-200 leading-relaxed font-normal">
-                  {module.situation.context}
-                </p>
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className={`${panelClass} space-y-2`}>
+                <div className={labelMuted}>Mise en situation :</div>
+                <p className={bodyText}>{module.situation.context}</p>
               </div>
-
               <div className="space-y-2">
-                <div className="text-slate-400 font-medium">Exemple de message typique reçu :</div>
-                <div className="p-4 rounded-xl border border-amber-900/40 bg-amber-950/20 text-amber-200 font-mono text-xs leading-relaxed italic">
+                <div className={labelMuted}>Exemple de message :</div>
+                <div className="p-4 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-100 font-mono text-xs leading-relaxed italic">
                   {module.situation.sampleSnippet}
                 </div>
               </div>
-
-              <div className="p-4 rounded-xl border border-blue-900/40 bg-blue-950/20 text-slate-300 leading-relaxed space-y-1">
-                <div className="font-semibold text-blue-300">Pourquoi cela fonctionne-t-il si souvent ?</div>
-                <p>
-                  Les attaquants ne cherchent pas à pirater vos serveurs : ils exploitent la surcharge cognitive, le sentiment d'urgence professionnelle ou la confiance naturelle envers vos outils quotidiens.
+              <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 space-y-1">
+                <div className="font-semibold text-blue-900 dark:text-blue-300 text-sm">Pourquoi ça marche ?</div>
+                <p className="text-sm text-[var(--foreground)] leading-relaxed opacity-90">
+                  Les attaquants exploitent l&apos;urgence, l&apos;autorité et la confiance dans les outils du quotidien — pas seulement une faille technique.
                 </p>
               </div>
             </div>
           )}
 
-          {/* STEP 2: SIGNES D'ALERTE */}
           {currentStep === 1 && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="text-slate-300 font-medium">
-                Voici les 3 signes d'alerte clés à toujours inspecter avant d'agir :
-              </div>
-
+              <p className={`${bodyText} font-medium`}>Signes d&apos;alerte à inspecter avant d&apos;agir :</p>
               <div className="space-y-3">
                 {module.warningSigns.map((ws, i) => (
-                  <div
-                    key={i}
-                    className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-1.5 hover:border-slate-700 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 font-semibold text-amber-300">
-                      <span className="w-5 h-5 rounded-full bg-amber-950 border border-amber-800/80 flex items-center justify-center text-[11px] font-mono text-amber-400">
-                        0{i + 1}
+                  <div key={i} className={`${panelClass} space-y-1.5 hover:border-[var(--primary)]/30 transition-colors`}>
+                    <div className="flex items-start gap-2 font-semibold text-amber-800 dark:text-amber-300">
+                      <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950 border border-amber-300 dark:border-amber-800 flex items-center justify-center text-[11px] font-mono shrink-0">
+                        {i + 1}
                       </span>
                       <span>{ws.sign}</span>
                     </div>
-                    <p className="text-slate-300 pl-7 leading-relaxed">{ws.description}</p>
+                    <p className="text-sm text-[var(--muted-foreground)] pl-8 leading-relaxed">{ws.description}</p>
                   </div>
                 ))}
               </div>
-
-              <div className="p-3.5 rounded-lg bg-slate-900/90 border border-slate-800 flex items-center gap-2 text-slate-400">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="p-3.5 rounded-lg vigilo-inset flex items-start gap-2 text-sm text-[var(--muted-foreground)]">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Astuce pratique :</strong> Un nom affiché ("Microsoft", "Direction") ne prouve rien. Seule l'adresse après le symbole @ et le domaine du lien font foi.
+                  <strong className="text-[var(--foreground)]">Astuce :</strong> le nom affiché ne suffit pas — vérifiez le domaine et le lien.
                 </span>
               </div>
             </div>
           )}
 
-          {/* STEP 3: BONNE RÉACTION */}
           {currentStep === 2 && (
-            <div className="space-y-5 animate-in fade-in duration-200">
-              <div className="p-4 rounded-xl border border-emerald-900/60 bg-emerald-950/20 space-y-1">
-                <div className="font-mono text-[10px] text-emerald-400 uppercase tracking-wider">
-                  Règle d'or de vigilance
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="p-4 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 space-y-1">
+                <div className="font-mono text-[10px] text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">
+                  Règle d&apos;or
                 </div>
-                <div className="text-sm font-bold text-white leading-relaxed">
-                  {module.correctReaction.rule}
-                </div>
+                <div className="text-sm font-bold text-[var(--foreground)] leading-relaxed">{module.correctReaction.rule}</div>
               </div>
-
-              <div className="space-y-3">
-                <div className="text-slate-400 font-medium">La procédure réflexe en 3 étapes :</div>
+              <div className="space-y-2">
+                <div className={labelMuted}>Procédure en étapes :</div>
                 {module.correctReaction.steps.map((st, i) => (
-                  <div
-                    key={i}
-                    className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-start gap-3"
-                  >
-                    <div className="w-6 h-6 rounded-lg bg-emerald-950 border border-emerald-800 flex items-center justify-center text-xs font-mono font-bold text-emerald-400 shrink-0 mt-0.5">
+                  <div key={i} className={`${panelClass} flex items-start gap-3`}>
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 flex items-center justify-center text-xs font-mono font-bold text-emerald-800 dark:text-emerald-400 shrink-0">
                       {i + 1}
                     </div>
-                    <div className="text-slate-200 leading-relaxed font-medium">{st}</div>
+                    <div className="text-sm text-[var(--foreground)] leading-relaxed font-medium">{st}</div>
                   </div>
                 ))}
-              </div>
-
-              <div className="p-3.5 rounded-lg bg-blue-950/30 border border-blue-900/50 text-blue-200 text-xs">
-                <strong>Le bouton de signalement :</strong> En signalant un email suspect plutôt qu'en le supprimant silencieusement, vous protégez instantanément vos collègues moins avertis.
               </div>
             </div>
           )}
 
-          {/* STEP 4: MINI-QUESTION */}
           {currentStep === 3 && (
-            <div className="space-y-5 animate-in fade-in duration-200">
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2">
-                <div className="flex items-center gap-2 font-mono text-[10px] text-blue-400 uppercase">
-                  <HelpCircle className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Mise en pratique</span>
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className={`${panelClass} space-y-2`}>
+                <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--primary)] uppercase">
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  Mise en pratique
                 </div>
-                <div className="text-sm font-bold text-white leading-relaxed">
-                  {module.miniQuiz.question}
-                </div>
+                <div className="text-sm font-bold text-[var(--foreground)] leading-relaxed">{module.miniQuiz.question}</div>
               </div>
 
-              {/* Options */}
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {module.miniQuiz.options.map((opt, idx) => {
                   const isSelected = selectedQuizAnswer === idx;
                   const isCorrect = idx === module.miniQuiz.correctIndex;
-
-                  let style = 'border-slate-800 bg-slate-900/60 text-slate-200 hover:border-slate-700';
+                  let style =
+                    'border-[var(--card-border)] bg-[var(--surface-inset)] text-[var(--foreground)] hover:border-[var(--primary)]/40';
 
                   if (isAnswerSubmitted) {
                     if (isCorrect) {
-                      style = 'border-emerald-500 bg-emerald-950/40 text-emerald-200 font-semibold';
+                      style =
+                        'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 font-semibold';
                     } else if (isSelected && !isCorrect) {
-                      style = 'border-red-500 bg-red-950/40 text-red-200';
+                      style = 'border-red-500 bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-100';
                     }
                   } else if (isSelected) {
-                    style = 'border-blue-500 bg-blue-950/40 text-white font-medium';
+                    style = 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--foreground)] font-medium ring-1 ring-[var(--primary)]/30';
                   }
 
                   return (
-                    <div
+                    <button
                       key={idx}
+                      type="button"
                       onClick={() => !isAnswerSubmitted && setSelectedQuizAnswer(idx)}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${style}`}
+                      disabled={isAnswerSubmitted}
+                      className={`w-full text-left p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${style}`}
                     >
-                      <div className="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center shrink-0 mt-0.5 text-xs font-mono">
+                      <div className="w-6 h-6 rounded-full border border-[var(--card-border)] flex items-center justify-center shrink-0 text-xs font-mono bg-[var(--card)]">
                         {String.fromCharCode(65 + idx)}
                       </div>
-                      <div className="flex-1 leading-relaxed">{opt}</div>
-                    </div>
+                      <span className="flex-1 leading-relaxed text-sm">{opt}</span>
+                    </button>
                   );
                 })}
               </div>
 
-              {/* Feedback when submitted */}
               {isAnswerSubmitted && (
                 <div
-                  className={`p-4 rounded-xl border space-y-1.5 animate-in fade-in duration-200 ${
+                  className={`p-4 rounded-xl border space-y-1.5 ${
                     isQuizCorrect
-                      ? 'border-emerald-500/60 bg-emerald-950/30 text-emerald-200'
-                      : 'border-red-500/60 bg-red-950/30 text-red-200'
+                      ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-100'
+                      : 'border-red-400 bg-red-50 dark:bg-red-950/30 text-red-900 dark:text-red-100'
                   }`}
                 >
-                  <div className="font-bold flex items-center gap-2">
+                  <div className="font-bold flex items-center gap-2 text-sm">
                     {isQuizCorrect ? (
                       <>
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span>Bonne réponse ! Réflexe validé.</span>
+                        <CheckCircle2 className="w-4 h-4" />
+                        Bonne réponse !
                       </>
                     ) : (
                       <>
-                        <AlertTriangle className="w-4 h-4 text-red-400" />
-                        <span>Ce n'était pas la bonne réaction :</span>
+                        <AlertTriangle className="w-4 h-4" />
+                        Ce n&apos;était pas la bonne réaction :
                       </>
                     )}
                   </div>
-                  <p className="text-slate-300 leading-relaxed text-xs">
-                    {module.miniQuiz.explanation}
-                  </p>
+                  <p className="text-sm leading-relaxed opacity-90">{module.miniQuiz.explanation}</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* STEP 5: COMPLÉTION */}
           {currentStep === 4 && (
-            <div className="text-center py-8 space-y-4 animate-in zoom-in-95 duration-200">
-              <div className="w-16 h-16 rounded-full bg-emerald-950 border-2 border-emerald-500 flex items-center justify-center mx-auto shadow-xl shadow-emerald-950">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            <div className="text-center py-6 sm:py-8 space-y-4 animate-in zoom-in-95 duration-200">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 border-2 border-emerald-500 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h3 className="text-xl font-bold text-white">Micro-formation complétée !</h3>
-              <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
-                Les réflexes d'alerte et de vérification sont assimilés. Vos collaborateurs sont désormais prêts pour la phase de <strong>Re-test</strong> afin de mesurer concrètement la baisse du taux de clic.
+              <h3 className="text-xl font-bold text-[var(--foreground)]">Micro-formation complétée !</h3>
+              <p className="text-sm text-[var(--muted-foreground)] max-w-md mx-auto leading-relaxed px-2">
+                Réflexes assimilés. Passez au <strong className="text-[var(--foreground)]">Re-test</strong> pour mesurer la baisse du taux de clic.
               </p>
-
-              <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 px-2">
                 <button
+                  type="button"
                   onClick={onNavigateToReTest}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-lg shadow-emerald-950 cursor-pointer"
+                  className="vigilo-btn-orange flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span>Passer au Re-test</span>
+                  Passer au Re-test
                 </button>
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
-                >
+                <button type="button" onClick={onClose} className="vigilo-btn-secondary px-4 py-2.5 rounded-lg text-sm cursor-pointer">
                   Retour au catalogue
                 </button>
               </div>
@@ -314,31 +297,33 @@ export const InteractiveTrainingPlayer: React.FC<InteractiveTrainingPlayerProps>
           )}
         </div>
 
-        {/* Footer Navigation */}
         {currentStep <= 3 && (
-          <div className="p-4 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between">
+          <div className="shrink-0 p-3 sm:p-4 border-t border-[var(--card-border)] bg-[var(--muted)] flex items-center justify-between gap-2">
             <button
+              type="button"
               onClick={handlePrevious}
               disabled={currentStep === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-xs"
+              className="vigilo-btn-secondary flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs disabled:opacity-30 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Précédent</span>
+              <span className="hidden xs:inline">Précédent</span>
             </button>
 
             {currentStep === 3 && !isAnswerSubmitted ? (
               <button
+                type="button"
                 onClick={handleSubmitQuiz}
                 disabled={selectedQuizAnswer === null}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs disabled:opacity-40 cursor-pointer"
+                className="vigilo-btn-orange px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-40 cursor-pointer"
               >
-                <span>Valider ma réponse</span>
+                Valider
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleNext}
                 disabled={currentStep === 3 && !isAnswerSubmitted}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs disabled:opacity-40 cursor-pointer"
+                className="vigilo-btn-orange flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-40 cursor-pointer"
               >
                 <span>{currentStep === 3 ? 'Terminer' : 'Suivant'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />

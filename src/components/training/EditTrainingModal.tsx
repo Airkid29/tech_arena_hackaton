@@ -66,7 +66,7 @@ export const EditTrainingModal: React.FC<EditTrainingModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm" data-vigilo-modal>
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--card-border)] bg-[var(--card)] shadow-2xl">
+      <div className="w-full sm:max-w-2xl max-h-[96dvh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-[var(--card-border)] bg-[var(--card)] shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-[var(--card-border)] bg-[var(--muted)]">
           <div className="flex items-center gap-2">
             <GraduationCap className="w-5 h-5 text-[var(--primary)]" />
