@@ -102,9 +102,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] text-[var(--foreground)] max-w-4xl mx-auto">
           {language === 'fr' ? (
-            <>Réduisez votre risque humain. <br /><span className="text-[var(--primary)]">Mesurablement.</span></>
+            <>Augmenter la vigilance de votre équipe face aux <span className="text-[var(--primary)]">cybermenaces.</span></>
           ) : (
-            <>Reduce your human risk. <br /><span className="text-[var(--primary)]">Measurably.</span></>
+            <>Improve your team's vigilance against <span className="text-[var(--primary)]">cyber threats.</span></>
           )}
         </h1>
 
