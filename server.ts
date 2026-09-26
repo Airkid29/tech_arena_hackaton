@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
 
@@ -502,6 +503,52 @@ Format JSON strict :
   }
 };
 
+// 4. Live Test Email Sender
+const handleSendLiveTest = async (req: Request, res: Response) => {
+  try {
+    const { email, scenario, origin } = req.body;
+    if (!email || !scenario) {
+      return res.status(400).json({ success: false, error: 'Email and scenario are required' });
+    }
+
+    const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
+    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+      return res.status(500).json({ 
+        success: false, 
+        error: "Configuration SMTP manquante dans le fichier .env (SMTP_HOST, SMTP_USER, SMTP_PASS)." 
+      });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT || 587),
+      secure: Number(SMTP_PORT) === 465,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+
+    // Remplace le lien factice par le lien magique
+    const magicLink = `${origin}/?trap=true&scenarioId=${encodeURIComponent(scenario.id || scenario.category)}`;
+    const modifiedBody = scenario.body.replace(/#vigilo-trap-link/g, magicLink);
+
+    const mailOptions = {
+      from: `"${scenario.senderName}" <${SMTP_USER}>`,
+      replyTo: scenario.senderEmail,
+      to: email,
+      subject: scenario.subject,
+      html: modifiedBody,
+    };
+
+    await transporter.sendMail(mailOptions);
+    return res.json({ success: true, message: 'Email envoyé avec succès !' });
+  } catch (error: any) {
+    console.error('[Live Test] Error sending email:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 // Register routes with both vigilo-ai and rodium-ai (for backwards compatibility)
 app.post('/api/vigilo-ai/generate-scenario', handleGenerateScenario);
 app.post('/api/rodium-ai/generate-scenario', handleGenerateScenario);
@@ -511,6 +558,8 @@ app.post('/api/rodium-ai/analyze-results', handleAnalyzeResults);
 
 app.post('/api/vigilo-ai/generate-training', handleGenerateTraining);
 app.post('/api/rodium-ai/generate-training', handleGenerateTraining);
+
+app.post('/api/send-live-test', handleSendLiveTest);
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {

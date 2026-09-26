@@ -84,10 +84,25 @@ export default function App() {
 
   const [isGenerateScenarioOpen, setIsGenerateScenarioOpen] = useState(false);
   const [isEmployeeSimulatorOpen, setIsEmployeeSimulatorOpen] = useState(false);
+  const [simulatorInitialViewState, setSimulatorInitialViewState] = useState<'inbox' | 'landing_page_clicked' | 'reported_success'>('inbox');
   const [simulatedCampaign, setSimulatedCampaign] = useState<Campaign | null>(null);
   const [simulatedScenario, setSimulatedScenario] = useState<Scenario | null>(null);
 
   const [activeInteractiveTraining, setActiveInteractiveTraining] = useState<TrainingModule | null>(null);
+
+  // Magic Link Trap Check
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('trap') === 'true') {
+      const scenId = params.get('scenarioId');
+      const scen = INITIAL_SCENARIOS.find(s => s.id === scenId || s.category === scenId) || INITIAL_SCENARIOS[0];
+      setSimulatedScenario(scen);
+      setSimulatorInitialViewState('landing_page_clicked');
+      setIsEmployeeSimulatorOpen(true);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   // Selected campaign for detail view
   const currentDetailCampaign = campaigns.find((c) => c.id === selectedCampaignId);
@@ -190,6 +205,7 @@ export default function App() {
 
     setSimulatedCampaign(camp || null);
     setSimulatedScenario(scen || null);
+    setSimulatorInitialViewState('inbox');
     setIsEmployeeSimulatorOpen(true);
   };
 
@@ -322,6 +338,7 @@ export default function App() {
           onEmployeeClickedTrap={handleEmployeeClickedTrap}
           onEmployeeReportedPhish={handleEmployeeReportedPhish}
           onStartTrainingFromTrap={handleStartTrainingFromTrap}
+          initialViewState={simulatorInitialViewState}
           isDark={isDark}
         />
 
@@ -506,6 +523,7 @@ export default function App() {
         onEmployeeClickedTrap={handleEmployeeClickedTrap}
         onEmployeeReportedPhish={handleEmployeeReportedPhish}
         onStartTrainingFromTrap={handleStartTrainingFromTrap}
+        initialViewState={simulatorInitialViewState}
         isDark={isDark}
       />
 

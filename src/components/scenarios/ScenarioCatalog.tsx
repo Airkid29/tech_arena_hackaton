@@ -30,12 +30,47 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>(scenarios[0]?.id || '');
 
+  const [testEmail, setTestEmail] = useState('');
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [testSuccess, setTestSuccess] = useState<string | null>(null);
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail || !activeScenario) return;
+    setIsSendingTest(true);
+    setTestSuccess(null);
+    try {
+      const origin = window.location.origin;
+      const res = await fetch('/api/send-live-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail, scenario: activeScenario, origin })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestSuccess("✅ Email envoyé avec succès ! Consultez votre boîte de réception pour tester le workflow.");
+        setTestEmail('');
+      } else {
+        alert("Erreur lors de l'envoi : " + data.error);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Erreur réseau ou le serveur n'est pas à jour. Avez-vous redémarré 'npm run dev' ?");
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
   const filteredScenarios = scenarios.filter((s) =>
     selectedCategory === 'all' ? true : s.category === selectedCategory
   );
 
   const activeScenario =
     scenarios.find((s) => s.id === selectedScenarioId) || filteredScenarios[0] || scenarios[0];
+
+  // Effacer le message de succès si on change de scénario
+  React.useEffect(() => {
+    setTestSuccess(null);
+  }, [activeScenario]);
 
   const categories = [
     { id: 'all', label: 'Tous les scénarios' },
@@ -149,6 +184,35 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
                   Lancer la campagne
                 </button>
               </div>
+            </div>
+
+            {/* Test Email Form */}
+            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/40 space-y-3">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-indigo-400" />
+                <span className="text-xs font-bold text-indigo-200">Envoyer un vrai test (Live Demo)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="email"
+                  placeholder="Votre adresse email (pour recevoir le leurre)"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-white/10 text-slate-200 text-xs rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  onClick={handleSendTestEmail}
+                  disabled={isSendingTest || !testEmail}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs transition-colors cursor-pointer shrink-0"
+                >
+                  {isSendingTest ? 'Envoi en cours...' : 'Envoyer'}
+                </button>
+              </div>
+              {testSuccess && (
+                <div className="text-xs font-mono text-emerald-400">
+                  {testSuccess}
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">

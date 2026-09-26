@@ -27,6 +27,7 @@ interface EmployeeSimulatorModalProps {
   onEmployeeReportedPhish: (campaignId: string) => void;
   onStartTrainingFromTrap: (targetCategoryOrId?: string) => void;
   isDark?: boolean;
+  initialViewState?: 'inbox' | 'landing_page_clicked' | 'reported_success';
 }
 
 export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
@@ -38,6 +39,7 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
   onEmployeeReportedPhish,
   onStartTrainingFromTrap,
   isDark = true,
+  initialViewState = 'inbox',
 }) => {
   if (!isOpen) return null;
 
@@ -48,7 +50,7 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
   const [channel, setChannel] = useState<'email' | 'whatsapp'>(isWhatsAppInitial ? 'whatsapp' : 'email');
 
   // View state: 'inbox' | 'landing_page_clicked' | 'reported_success'
-  const [viewState, setViewState] = useState<'inbox' | 'landing_page_clicked' | 'reported_success'>('inbox');
+  const [viewState, setViewState] = useState<'inbox' | 'landing_page_clicked' | 'reported_success'>(initialViewState);
 
   // Sync channel if scenario changes
   useEffect(() => {
