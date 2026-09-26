@@ -561,6 +561,55 @@ app.post('/api/rodium-ai/generate-training', handleGenerateTraining);
 
 app.post('/api/send-live-test', handleSendLiveTest);
 
+const handleSendTrainingInvite = async (req: Request, res: Response) => {
+  try {
+    const { email, firstName, module, origin } = req.body;
+    if (!email || !module?.title) {
+      return res.status(400).json({ success: false, error: 'email et module requis' });
+    }
+
+    const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
+    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+      return res.status(200).json({
+        success: true,
+        simulated: true,
+        message: 'SMTP non configuré — envoi simulé côté console VIGILO.',
+      });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT || 587),
+      secure: Number(SMTP_PORT) === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+
+    const trainingLink = `${origin || ''}/?trainingId=${encodeURIComponent(module.id || '')}`;
+    const html = `<div style="font-family:Segoe UI,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:8px;">
+  <p style="font-size:15px;">Bonjour ${firstName || ''},</p>
+  <p style="font-size:14px;line-height:1.6;">Votre équipe IT vous assigne la micro-formation VIGILO <strong>${module.title}</strong> (${module.durationMinutes || 2} min).</p>
+  <p style="text-align:center;margin:28px 0;">
+    <a href="${trainingLink}" style="background:#ea580c;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;">Ouvrir la formation</a>
+  </p>
+  <p style="font-size:12px;color:#64748b;">Plateforme VIGILO — cyber-résilience comportementale PME.</p>
+</div>`;
+
+    await transporter.sendMail({
+      from: `"VIGILO Formations" <${SMTP_USER}>`,
+      to: email,
+      subject: `[VIGILO] Micro-formation assignée : ${module.title}`,
+      html,
+    });
+
+    return res.json({ success: true, message: 'Invitation formation envoyée.' });
+  } catch (error: any) {
+    console.error('[Training Invite] Error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+app.post('/api/send-training-invite', handleSendTrainingInvite);
+
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({

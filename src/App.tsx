@@ -10,6 +10,9 @@ import { GenerateScenarioModal } from './components/scenarios/GenerateScenarioMo
 import { AiCoachView } from './components/ai-coach/AiCoachView';
 import { TrainingView } from './components/training/TrainingView';
 import { InteractiveTrainingPlayer } from './components/training/InteractiveTrainingPlayer';
+import { EditTrainingModal } from './components/training/EditTrainingModal';
+import { AssignTrainingModal } from './components/training/AssignTrainingModal';
+import { vigiloTrainingService } from './services/api';
 import { ReTestView } from './components/retest/ReTestView';
 import { SettingsView } from './components/settings/SettingsView';
 import { FlashNewsView } from './components/flash-news/FlashNewsView';
@@ -94,10 +97,22 @@ export default function App() {
   const [simulatedScenario, setSimulatedScenario] = useState<Scenario | null>(null);
 
   const [activeInteractiveTraining, setActiveInteractiveTraining] = useState<TrainingModule | null>(null);
+  const [trainingToEdit, setTrainingToEdit] = useState<TrainingModule | null>(null);
+  const [trainingToAssign, setTrainingToAssign] = useState<TrainingModule | null>(null);
 
   // Magic Link Trap Check
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const trainingId = params.get('trainingId');
+    if (trainingId) {
+      const mod = INITIAL_TRAININGS.find((t) => t.id === trainingId);
+      if (mod) {
+        setViewMode('app');
+        setActiveTab('training');
+        setActiveInteractiveTraining(mod);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
     if (params.get('trap') === 'true') {
       const scenId = params.get('scenarioId');
       const scen = INITIAL_SCENARIOS.find(s => s.id === scenId || s.category === scenId) || INITIAL_SCENARIOS[0];
@@ -280,6 +295,75 @@ export default function App() {
           : t
       )
     );
+    setEmployees((prev) =>
+      prev.map((emp) => {
+        const assignments = emp.trainingAssignments;
+        if (!assignments?.some((a) => a.moduleId === moduleId && a.status === 'envoyé')) {
+          return emp;
+        }
+        return {
+          ...emp,
+          trainingAssignments: assignments.map((a) =>
+            a.moduleId === moduleId && a.status === 'envoyé' ? { ...a, status: 'complété' as const } : a
+          ),
+        };
+      })
+    );
+  };
+
+  const handleUpdateTraining = (updated: TrainingModule) => {
+    setTrainings((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  };
+
+  const handleAssignTraining = async (
+    moduleId: string,
+    employeeIds: string[],
+    channel: 'Email' | 'WhatsApp'
+  ): Promise<{ success: boolean; sentCount: number }> => {
+    const mod = trainings.find((t) => t.id === moduleId);
+    if (!mod || employeeIds.length === 0) {
+      return { success: false, sentCount: 0 };
+    }
+
+    const targets = employees.filter((e) => employeeIds.includes(e.id));
+    const origin = window.location.origin;
+    const assignedAt = new Date().toISOString();
+
+    for (const emp of targets) {
+      if (channel === 'Email') {
+        await vigiloTrainingService.sendTrainingInvite({
+          email: emp.email,
+          firstName: emp.firstName,
+          module: mod,
+          origin,
+        });
+      }
+    }
+
+    setTrainings((prev) =>
+      prev.map((t) =>
+        t.id === moduleId ? { ...t, totalAssigned: t.totalAssigned + targets.length } : t
+      )
+    );
+
+    setEmployees((prev) =>
+      prev.map((emp) => {
+        if (!employeeIds.includes(emp.id)) return emp;
+        const entry = {
+          moduleId: mod.id,
+          moduleTitle: mod.title,
+          assignedAt,
+          channel,
+          status: 'envoyé' as const,
+        };
+        return {
+          ...emp,
+          trainingAssignments: [...(emp.trainingAssignments || []), entry],
+        };
+      })
+    );
+
+    return { success: true, sentCount: targets.length };
   };
 
   // Flash News Handlers
@@ -490,7 +574,8 @@ export default function App() {
             <TrainingView
               trainings={trainings}
               onOpenPlayer={(mod) => setActiveInteractiveTraining(mod)}
-              onNavigateToReTest={() => setActiveTab('retest')}
+              onEditModule={(mod) => setTrainingToEdit(mod)}
+              onAssignModule={(mod) => setTrainingToAssign(mod)}
             />
           )}
 
@@ -557,6 +642,21 @@ export default function App() {
         onStartTrainingFromTrap={handleStartTrainingFromTrap}
         initialViewState={simulatorInitialViewState}
         isDark={isDark}
+      />
+
+      <EditTrainingModal
+        isOpen={Boolean(trainingToEdit)}
+        module={trainingToEdit}
+        onClose={() => setTrainingToEdit(null)}
+        onSave={handleUpdateTraining}
+      />
+
+      <AssignTrainingModal
+        isOpen={Boolean(trainingToAssign)}
+        module={trainingToAssign}
+        employees={employees}
+        onClose={() => setTrainingToAssign(null)}
+        onAssign={handleAssignTraining}
       />
 
       {/* 4. Interactive Micro-training Player Modal */}

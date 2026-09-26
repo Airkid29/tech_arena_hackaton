@@ -387,9 +387,14 @@
   color: var(--foreground);
 }
 
-/* Keep employee simulator preview intentionally dark (realistic channel UI) */
+/* Simulateur : pas de remapping global text-white (styles dédiés via isDark) */
 [data-vigilo-theme='light'] [data-vigilo-simulator-chrome] .text-white {
-  color: #f8fafc;
+  color: #ffffff;
+}
+[data-vigilo-theme='light'] [data-vigilo-simulator-chrome] .text-slate-200,
+[data-vigilo-theme='light'] [data-vigilo-simulator-chrome] .text-slate-300,
+[data-vigilo-theme='light'] [data-vigilo-simulator-chrome] .text-slate-400 {
+  color: inherit;
 }
 
 ::-webkit-scrollbar {

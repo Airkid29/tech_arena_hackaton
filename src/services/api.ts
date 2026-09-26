@@ -150,3 +150,25 @@ export const vigiloAiService = {
 
 // Backwards compatibility alias
 export const rodiumAiService = vigiloAiService;
+
+export const vigiloTrainingService = {
+  async sendTrainingInvite(params: {
+    email: string;
+    firstName: string;
+    module: TrainingModule;
+    origin: string;
+  }): Promise<boolean> {
+    try {
+      const response = await fetch('/api/send-training-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      if (!response.ok) return false;
+      const data = await response.json();
+      return Boolean(data.success);
+    } catch {
+      return false;
+    }
+  },
+};

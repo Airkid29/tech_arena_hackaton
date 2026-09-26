@@ -116,6 +116,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ employees, onAddEm
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Département</th>
                 <th className="px-4 py-3 font-medium text-center">Score de Risque</th>
+                <th className="px-4 py-3 font-medium text-center">Formations</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -151,6 +152,26 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ employees, onAddEm
                       </span>
                     </div>
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    {(() => {
+                      const list = emp.trainingAssignments || [];
+                      const pending = list.filter((a) => a.status === 'envoyé').length;
+                      const done = list.filter((a) => a.status === 'complété').length;
+                      if (list.length === 0) {
+                        return <span className="text-[11px] text-slate-500">—</span>;
+                      }
+                      return (
+                        <div className="text-[11px] font-mono space-y-0.5">
+                          {pending > 0 && (
+                            <div className="text-amber-500">{pending} en cours</div>
+                          )}
+                          {done > 0 && (
+                            <div className="text-emerald-500">{done} complété(s)</div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <button onClick={() => onRemoveEmployee(emp.id)} className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors cursor-pointer" title="Supprimer">
                       <Trash2 className="w-4 h-4" />
@@ -160,7 +181,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ employees, onAddEm
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                     Aucun collaborateur trouvé.
                   </td>
                 </tr>

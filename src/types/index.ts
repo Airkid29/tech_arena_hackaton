@@ -11,6 +11,16 @@ export type DifficultyLevel = 'Facile' | 'Moyen' | 'Difficile';
 export type CampaignStatus = 'brouillon' | 'planifiée' | 'en_cours' | 'terminée';
 export type AppViewMode = 'landing' | 'app' | 'login';
 
+export type TrainingAssignmentStatus = 'envoyé' | 'complété';
+
+export interface EmployeeTrainingAssignment {
+  moduleId: string;
+  moduleTitle: string;
+  assignedAt: string;
+  channel: 'Email' | 'WhatsApp';
+  status: TrainingAssignmentStatus;
+}
+
 export interface Employee {
   id: string;
   firstName: string;
@@ -19,6 +29,7 @@ export interface Employee {
   department: string;
   role: string;
   riskScore: number;
+  trainingAssignments?: EmployeeTrainingAssignment[];
 }
 
 export interface FlashArticle {
