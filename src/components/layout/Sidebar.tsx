@@ -55,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'ai-coach',
       label: t.nav.coach,
       icon: Sparkles,
-      badge: 'Gemini 2.5',
+      badge: 'RodiumAI',
     },
     {
       id: 'training',
@@ -84,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-64 border-r border-white/10 bg-[#080b11] text-slate-200 flex flex-col justify-between shrink-0 select-none transition-all">
+    <aside className="w-64 border-r border-[var(--card-border)] bg-[var(--card)] text-slate-200 flex flex-col justify-between shrink-0 select-none transition-all">
       <div className="p-4 space-y-6">
         {/* Navigation list */}
         <nav className="space-y-1">
@@ -112,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {item.badge && (
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
-                      item.badge === 'Nouveau' || item.badge === 'New' || item.badge === 'Gemini 2.5'
+                      item.badge === 'Nouveau' || item.badge === 'New' || item.badge === 'RodiumAI'
                         ? 'bg-[#f2620a]/20 text-[#fb923c] border border-[#f2620a]/30'
                         : 'bg-white/10 text-slate-300 border border-white/10'
                     }`}

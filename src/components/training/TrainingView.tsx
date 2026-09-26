@@ -126,9 +126,9 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
               </p>
             </div>
 
-            <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-              <span className="text-[11px] font-mono text-emerald-400 font-semibold">
-                {mod.quiz.questions.length} questions interactives
+            <div className="pt-4 border-t border-[var(--card-border)] flex items-center justify-between">
+              <span className="text-[11px] font-mono text-emerald-500 font-semibold">
+                {mod.miniQuiz ? 1 : 0} question interactive
               </span>
 
               <button

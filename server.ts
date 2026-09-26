@@ -30,6 +30,36 @@ if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
   });
 }
 
+// RodiumAI fetch helper
+const callRodiumAI = async (prompt: string, model: string = 'gemini-3.8-flash') => {
+  const rodiumKey = process.env.RODIUM_API_KEY;
+  if (!rodiumKey) throw new Error('RODIUM_API_KEY non définie');
+
+  // Tentative d'utilisation de l'API Rodium (compatible OpenAI)
+  const rodiumUrl = process.env.RODIUM_API_URL || 'https://api.rodiumai.io/v1/chat/completions';
+  const response = await fetch(rodiumUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${rodiumKey}`
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur RodiumAI: HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('Réponse RodiumAI invalide');
+  return text;
+};
+
 // Vigilo Cyber Coach API Endpoints
 const handleGenerateScenario = async (req: Request, res: Response) => {
   const { targetAudience, scenarioType, difficulty, companyContext } = req.body;
@@ -138,7 +168,7 @@ const handleGenerateScenario = async (req: Request, res: Response) => {
     };
   };
 
-  if (aiClient) {
+  if (process.env.RODIUM_API_KEY || aiClient) {
     try {
       const prompt = `Tu es Vigilo Coach, l'IA experte en cyber-résilience humaine intégrée à la plateforme SaaS VIGILO.
 VIGILO aide les PME à mesurer et renforcer la vigilance de leurs équipes selon le cycle : Simuler → Mesurer → Analyser → Former → Re-tester.
@@ -164,19 +194,41 @@ Format de réponse attendu en JSON strict sans balises markdown superflues:
   "landingPageContent": "Explication pédagogique affichée si l'utilisateur clique"
 }`;
 
-      const response = await aiClient.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
+      let responseText = '';
+      let engineUsed = '';
+      
+      if (process.env.RODIUM_API_KEY) {
+        try {
+          responseText = await callRodiumAI(prompt, 'gemini-3.8-flash');
+          engineUsed = 'rodium-ai-gemini';
+        } catch (rodiumErr: any) {
+          console.warn('[Rodium Coach] Erreur API Rodium, fallback:', rodiumErr.message);
+          if (aiClient) {
+            const response = await aiClient.models.generateContent({
+              model: 'gemini-3.8-flash',
+              contents: prompt,
+              config: { responseMimeType: 'application/json' },
+            });
+            responseText = response.text || '';
+            engineUsed = 'gemini-3.8-flash';
+          } else {
+            throw rodiumErr;
+          }
+        }
+      } else if (aiClient) {
+        const response = await aiClient.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+          config: { responseMimeType: 'application/json' },
+        });
+        responseText = response.text || '';
+        engineUsed = 'gemini-3.8-flash';
+      }
 
-      const responseText = response.text || '';
       const parsed = JSON.parse(responseText);
-      return res.json({ success: true, data: parsed, engine: 'gemini-3.8-flash' });
+      return res.json({ success: true, data: parsed, engine: engineUsed });
     } catch (err: any) {
-      console.warn('[Vigilo Coach] Gemini unavailable, falling back to built-in generator:', err.message);
+      console.warn('[Vigilo Coach] IA unavailable, falling back to built-in generator:', err.message);
       return res.json({ success: true, data: getFallbackScenario(), engine: 'vigilo-builtin' });
     }
   }
@@ -189,7 +241,7 @@ const handleAnalyzeResults = async (req: Request, res: Response) => {
   try {
     const { campaignName, targeted, delivered, opened, clicked, reported, clickRate, reportRate, scenarioType, departments } = req.body;
 
-    if (aiClient) {
+    if (process.env.RODIUM_API_KEY || aiClient) {
       const prompt = `Tu es Vigilo Coach, le moteur d'analyse cyber comportementale de la plateforme VIGILO.
 VIGILO est un SaaS B2B destiné aux PME. Sa devise : « Mesurez et renforcez la vigilance de votre équipe. »
 Principe : Simuler → Mesurer → Analyser → Former → Re-tester.
@@ -220,20 +272,41 @@ Fournis une analyse synthétique et percutante au format JSON strict :
   "trainingAdvice": "Le taux de clic indique un risque important concernant ... Nous recommandons une formation de 5 minutes sur ..."
 }`;
 
-      const response = await aiClient.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
+      let responseText = '';
+      let engineUsed = '';
 
-      const responseText = response.text || '';
-      try {
-        const parsed = JSON.parse(responseText);
-        return res.json({ success: true, data: parsed, engine: 'gemini-3.8-flash' });
-      } catch {
-        // fallback
+      if (process.env.RODIUM_API_KEY) {
+        try {
+          responseText = await callRodiumAI(prompt, 'gemini-3.8-flash');
+          engineUsed = 'rodium-ai-gemini';
+        } catch (err) {
+          if (aiClient) {
+            const response = await aiClient.models.generateContent({
+              model: 'gemini-3.8-flash',
+              contents: prompt,
+              config: { responseMimeType: 'application/json' },
+            });
+            responseText = response.text || '';
+            engineUsed = 'gemini-3.8-flash';
+          }
+        }
+      } else if (aiClient) {
+        const response = await aiClient.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+          config: { responseMimeType: 'application/json' },
+        });
+        responseText = response.text || '';
+        engineUsed = 'gemini-3.8-flash';
+      }
+
+      if (responseText) {
+        try {
+          const parsed = JSON.parse(responseText);
+          return res.json({ success: true, data: parsed, engine: engineUsed });
+        } catch {
+          // fallback below
+        }
       }
     }
 
@@ -276,7 +349,7 @@ const handleGenerateTraining = async (req: Request, res: Response) => {
   try {
     const { scenarioType, vulnerabilityFocus } = req.body;
 
-    if (aiClient) {
+    if (process.env.RODIUM_API_KEY || aiClient) {
       const prompt = `Tu es Vigilo Coach, le formateur en cyber-résilience humaine de VIGILO. Génère une micro-formation interactive de cybersécurité de 3 à 5 minutes pour des collaborateurs de PME.
 Thème : ${scenarioType || 'Phishing'}
 Point de vulnérabilité identifié : ${vulnerabilityFocus || 'Détection des liens piégés et sentiment d urgence'}
@@ -321,20 +394,41 @@ Format JSON strict :
   }
 }`;
 
-      const response = await aiClient.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
+      let responseText = '';
+      let engineUsed = '';
 
-      const responseText = response.text || '';
-      try {
-        const parsed = JSON.parse(responseText);
-        return res.json({ success: true, data: parsed, engine: 'gemini-3.8-flash' });
-      } catch {
-        // fallback
+      if (process.env.RODIUM_API_KEY) {
+        try {
+          responseText = await callRodiumAI(prompt, 'gemini-3.8-flash');
+          engineUsed = 'rodium-ai-gemini';
+        } catch (err) {
+          if (aiClient) {
+            const response = await aiClient.models.generateContent({
+              model: 'gemini-3.8-flash',
+              contents: prompt,
+              config: { responseMimeType: 'application/json' },
+            });
+            responseText = response.text || '';
+            engineUsed = 'gemini-3.8-flash';
+          }
+        }
+      } else if (aiClient) {
+        const response = await aiClient.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+          config: { responseMimeType: 'application/json' },
+        });
+        responseText = response.text || '';
+        engineUsed = 'gemini-3.8-flash';
+      }
+
+      if (responseText) {
+        try {
+          const parsed = JSON.parse(responseText);
+          return res.json({ success: true, data: parsed, engine: engineUsed });
+        } catch {
+          // fallback
+        }
       }
     }
 

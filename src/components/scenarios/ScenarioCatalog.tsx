@@ -65,7 +65,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
           className="vigilo-btn-orange flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold shadow-md cursor-pointer self-start sm:self-auto"
         >
           <Sparkles className="w-4 h-4 text-white" />
-          <span>Générer avec Gemini 2.5 Coach</span>
+          <span>Générer avec RodiumAI (Coach IA)</span>
         </button>
       </div>
 
@@ -87,9 +87,9 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
       </div>
 
       {/* Two columns: Scenario list & Detail Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left List */}
-        <div className="lg:col-span-5 space-y-3">
+        <div className="lg:col-span-4 space-y-3">
           {filteredScenarios.map((scen) => {
             const isSelected = activeScenario?.id === scen.id;
             return (
@@ -108,7 +108,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
                   </span>
                   <span
                     className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                      scen.difficulty === 'Élevé'
+                      scen.difficulty === 'Élevé' || scen.difficulty === 'Difficile'
                         ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                         : scen.difficulty === 'Moyen'
                         ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
@@ -128,7 +128,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
 
         {/* Right Active Scenario Preview */}
         {activeScenario && (
-          <div className="lg:col-span-7 vigilo-card p-6 space-y-6">
+          <div className="lg:col-span-8 vigilo-card p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div>
                 <span className="text-xs font-mono text-[#fb923c]">Détail du scénario sélectionné</span>
@@ -181,7 +181,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
               <div className="space-y-2">
                 <span className="text-xs font-mono text-slate-400">Aperçu du contenu du message :</span>
                 <div
-                  className="p-4 rounded-xl bg-slate-950 border border-white/10 text-xs text-slate-200 font-mono leading-relaxed overflow-x-auto max-h-60"
+                  className="p-4 rounded-xl bg-slate-950 border border-white/10 text-xs text-slate-200 font-mono leading-relaxed overflow-x-auto min-h-[400px] max-h-[600px] shadow-inner"
                   dangerouslySetInnerHTML={{ __html: activeScenario.body }}
                 />
               </div>

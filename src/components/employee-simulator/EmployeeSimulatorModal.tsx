@@ -163,9 +163,9 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-[#05070c]">
+        <div className={`${viewState === 'inbox' && channel === 'whatsapp' ? 'p-0 overflow-hidden' : 'p-6 overflow-y-auto space-y-6'} flex-1 bg-[#05070c] flex flex-col`}>
           {viewState === 'inbox' && (
-            <div className="space-y-6">
+            <div className={`flex-1 flex flex-col ${channel === 'whatsapp' ? '' : 'space-y-6'}`}>
               {channel === 'email' ? (
                 /* Email View */
                 <div className="p-6 rounded-2xl border border-white/10 bg-slate-900 shadow-xl space-y-4">

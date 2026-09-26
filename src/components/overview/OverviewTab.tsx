@@ -89,7 +89,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           {[
             { step: '01', title: 'Simuler', desc: 'Attaque contrôlée (Email / WhatsApp)' },
             { step: '02', title: 'Mesurer', desc: 'Comportements réels (Clics & Signalements)' },
-            { step: '03', title: 'Analyser', desc: 'Diagnostic Gemini 2.5 Coach' },
+            { step: '03', title: 'Analyser', desc: 'Diagnostic par RodiumAI' },
             { step: '04', title: 'Former', desc: 'Micro-module de 2 minutes' },
             { step: '05', title: 'Re-tester', desc: 'Mesure de l évolution concrète' },
           ].map((item, idx) => (
@@ -221,7 +221,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono text-amber-400">
               <Sparkles className="w-4 h-4" />
-              <span>Vigilo Coach IA (Gemini 2.5)</span>
+              <span>Vigilo Coach IA (RodiumAI)</span>
             </div>
             <h3 className="text-base font-bold text-white">Recommandation Stratégique</h3>
             <p className="text-xs text-slate-300 leading-relaxed bg-white/[0.02] border border-white/10 p-4 rounded-xl">
