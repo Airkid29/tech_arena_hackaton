@@ -5,6 +5,26 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import nodemailer from 'nodemailer';
+import cookieParser from 'cookie-parser';
+import {
+  handleRegister,
+  handleLogin,
+  handleLogout,
+  handleMe,
+} from './server/authRoutes';
+import { requireAuth } from './server/authMiddleware';
+import {
+  handleOrgSummary,
+  handleListDepartments,
+  handleCreateDepartment,
+  handleUpdateDepartment,
+  handleDeleteDepartment,
+  handleListEmployees,
+  handleGetEmployee,
+  handleCreateEmployee,
+  handleUpdateEmployee,
+  handleDeleteEmployee,
+} from './server/orgRoutes';
 
 dotenv.config();
 
@@ -15,6 +35,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(cookieParser());
 
 // Initialize Google GenAI on the server if key is provided
 const apiKey = process.env.GEMINI_API_KEY;
@@ -549,6 +570,40 @@ const handleSendLiveTest = async (req: Request, res: Response) => {
   }
 };
 
+// Auth admin (public) + health
+app.post('/api/auth/register', handleRegister);
+app.post('/api/auth/login', handleLogin);
+app.post('/api/auth/logout', handleLogout);
+app.get('/api/auth/me', requireAuth, handleMe);
+
+// Org: company departments (RH, Comptabilité…) + employees — requireAuth via middleware below
+// Also registered with explicit requireAuth for clarity / route order safety
+app.get('/api/org/summary', requireAuth, handleOrgSummary);
+app.get('/api/org/departments', requireAuth, handleListDepartments);
+app.post('/api/org/departments', requireAuth, handleCreateDepartment);
+app.patch('/api/org/departments/:id', requireAuth, handleUpdateDepartment);
+app.delete('/api/org/departments/:id', requireAuth, handleDeleteDepartment);
+app.get('/api/org/employees', requireAuth, handleListEmployees);
+app.get('/api/org/employees/:id', requireAuth, handleGetEmployee);
+app.post('/api/org/employees', requireAuth, handleCreateEmployee);
+app.patch('/api/org/employees/:id', requireAuth, handleUpdateEmployee);
+app.delete('/api/org/employees/:id', requireAuth, handleDeleteEmployee);
+
+app.get('/api/health', (req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    version: '1.0.0',
+    service: 'VIGILO Cybersecurity Platform',
+    aiEnabled: !!aiClient,
+  });
+});
+
+// Protect remaining /api/* routes
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth/') || req.path === '/health') return next();
+  return requireAuth(req as any, res, next);
+});
+
 // Register routes with both vigilo-ai and rodium-ai (for backwards compatibility)
 app.post('/api/vigilo-ai/generate-scenario', handleGenerateScenario);
 app.post('/api/rodium-ai/generate-scenario', handleGenerateScenario);
@@ -610,15 +665,6 @@ const handleSendTrainingInvite = async (req: Request, res: Response) => {
 
 app.post('/api/send-training-invite', handleSendTrainingInvite);
 
-// Health check endpoint
-app.get('/api/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    version: '1.0.0',
-    service: 'VIGILO Cybersecurity Platform',
-    aiEnabled: !!aiClient,
-  });
-});
 
 // Setup Vite in development or static serve in production
 async function startServer() {

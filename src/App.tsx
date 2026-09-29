@@ -12,7 +12,7 @@ import { TrainingView } from './components/training/TrainingView';
 import { InteractiveTrainingPlayer } from './components/training/InteractiveTrainingPlayer';
 import { EditTrainingModal } from './components/training/EditTrainingModal';
 import { AssignTrainingModal } from './components/training/AssignTrainingModal';
-import { vigiloTrainingService } from './services/api';
+import { vigiloTrainingService, vigiloAuthService, vigiloOrgService } from './services/api';
 import { ReTestView } from './components/retest/ReTestView';
 import { SettingsView } from './components/settings/SettingsView';
 import { FlashNewsView } from './components/flash-news/FlashNewsView';
@@ -27,7 +27,6 @@ import {
   INITIAL_RETEST_RECORD,
   INITIAL_SETTINGS,
   INITIAL_FLASH_ARTICLES,
-  INITIAL_EMPLOYEES,
 } from './data/mockData';
 import {
   Campaign,
@@ -39,11 +38,17 @@ import {
   AppViewMode,
   FlashArticle,
   Employee,
+  AdminPublic,
+  CompanyDepartment,
 } from './types';
 import { Language } from './i18n/translations';
 
 export default function App() {
   const [viewMode, setViewMode] = useState<AppViewMode>('landing');
+  const [admin, setAdmin] = useState<AdminPublic | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [orgDepartments, setOrgDepartments] = useState<CompanyDepartment[]>([]);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
 
@@ -75,6 +80,79 @@ export default function App() {
     }
   }, [theme]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await vigiloAuthService.me();
+        if (!cancelled) {
+          setAdmin(me);
+          if (me) setViewMode('app');
+        }
+      } catch {
+        // réseau / JSON : rester déconnecté
+      } finally {
+        if (!cancelled) setAuthChecking(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'app' && !admin && !authChecking) {
+      setViewMode('login');
+    }
+  }, [viewMode, admin, authChecking]);
+
+  // Prefetch org employees after login (Directory refreshes again on enter)
+  useEffect(() => {
+    if (!admin) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [depts, orgEmps] = await Promise.all([
+          vigiloOrgService.listDepartments(),
+          vigiloOrgService.listEmployees(),
+        ]);
+        if (cancelled) return;
+        setOrgDepartments(depts);
+        setEmployees((prev) => {
+          const prevById = new Map(prev.map((e) => [e.id, e]));
+          return orgEmps.map((emp) => {
+            const dept = depts.find((d) => d.id === emp.departmentId);
+            const p = prevById.get(emp.id);
+            return {
+              id: emp.id,
+              firstName: emp.firstName,
+              lastName: emp.lastName,
+              email: emp.email,
+              department: dept?.name || '—',
+              departmentId: emp.departmentId,
+              role: emp.role,
+              riskScore: emp.riskScore,
+              trainingAssignments: p?.trainingAssignments,
+            };
+          });
+        });
+      } catch {
+        // Directory shows error when opened
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [admin?.id]);
+
+  const handleLogout = async () => {
+    try {
+      await vigiloAuthService.logout();
+    } catch {
+      // ignore network errors on logout
+    }
+    setAdmin(null);
+    setEmployees([]);
+    setOrgDepartments([]);
+    setViewMode('landing');
+  };
+
   // Core Data
   const [campaigns, setCampaigns] = useState<Campaign[]>(INITIAL_CAMPAIGNS);
   const [scenarios, setScenarios] = useState<Scenario[]>(INITIAL_SCENARIOS);
@@ -82,7 +160,6 @@ export default function App() {
   const [retestRecord, setRetestRecord] = useState<ReTestRecord>(INITIAL_RETEST_RECORD);
   const [settings, setSettings] = useState<SimulationProviderSettings>(INITIAL_SETTINGS);
   const [flashArticles, setFlashArticles] = useState<FlashArticle[]>(INITIAL_FLASH_ARTICLES);
-  const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
 
   // Modals & Sub-flows
   const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
@@ -398,6 +475,16 @@ export default function App() {
   const activeCampaignCount = campaigns.filter((c) => c.status === 'en_cours').length;
   const isDark = theme === 'dark';
 
+  if (authChecking) {
+    return (
+      <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)] text-[var(--muted-foreground)] text-sm">
+          Vérification de session…
+        </div>
+      </div>
+    );
+  }
+
   // 1. IF VIEW MODE IS LANDING: Display clean, non-AI-slop landing page with working i18n & theme
   if (viewMode === 'landing') {
     return (
@@ -453,7 +540,16 @@ export default function App() {
     return (
       <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
         <AdminLogin
-          onLogin={() => setViewMode('app')}
+          onLogin={(a) => {
+            setAdmin(a);
+            setSettings((prev) => ({
+              ...prev,
+              companyName: a.companyName,
+              companySize: a.companySize,
+              services: a.services,
+            }));
+            setViewMode('app');
+          }}
           onBack={() => setViewMode('landing')}
         />
       </div>
@@ -472,7 +568,7 @@ export default function App() {
       <Navbar
         activeTab={activeTab}
         onOpenEmployeeSimulator={() => handleOpenSimulator()}
-        onGoToLanding={() => setViewMode('landing')}
+        onGoToLanding={handleLogout}
         settings={settings}
         language={language}
         onToggleLanguage={handleToggleLanguage}
@@ -490,7 +586,7 @@ export default function App() {
               setSelectedCampaignId(null);
             }
           }}
-          onGoToLanding={() => setViewMode('landing')}
+          onGoToLanding={handleLogout}
           activeCampaignCount={activeCampaignCount}
           language={language}
           theme={theme}
@@ -563,12 +659,7 @@ export default function App() {
           {activeTab === 'directory' && (
             <DirectoryView
               employees={employees}
-              onAddEmployee={(newEmp) => {
-                setEmployees((prev) => [{ ...newEmp, id: `emp-${Date.now()}`, riskScore: Math.floor(Math.random() * 40) + 10 }, ...prev]);
-              }}
-              onRemoveEmployee={(id) => {
-                setEmployees((prev) => prev.filter(e => e.id !== id));
-              }}
+              onEmployeesChange={setEmployees}
             />
           )}
 
@@ -618,6 +709,7 @@ export default function App() {
         onClose={() => setIsCreateCampaignOpen(false)}
         scenarios={scenarios}
         employees={employees}
+        departments={orgDepartments}
         onCreate={handleCreateCampaign}
         preselectedScenarioId={createCampaignScenarioId}
         isReTestMode={isReTestCreateMode}
