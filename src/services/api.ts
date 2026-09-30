@@ -1,4 +1,59 @@
 import { Campaign, ScenarioCategory, DifficultyLevel, AIAnalysis, TrainingModule } from '../types';
+import type { AdminPublic, CompanySize, VigiloService, CompanyDepartment, OrgEmployee, OrgSummary } from '../types';
+
+async function apiFetch(url: string, init: RequestInit = {}) {
+  const response = await fetch(url, {
+    ...init,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+    },
+  });
+  return response;
+}
+
+export const vigiloAuthService = {
+  async register(payload: {
+    email: string;
+    password: string;
+    companyName: string;
+    companySize: CompanySize;
+    services: VigiloService[];
+  }): Promise<AdminPublic> {
+    const res = await apiFetch('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Inscription échouée');
+    if (!data.data) throw new Error('Réponse inscription invalide');
+    return data.data;
+  },
+
+  async login(email: string, password: string): Promise<AdminPublic> {
+    const res = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Connexion échouée');
+    if (!data.data) throw new Error('Réponse connexion invalide');
+    return data.data;
+  },
+
+  async logout(): Promise<void> {
+    await apiFetch('/api/auth/logout', { method: 'POST' });
+  },
+
+  async me(): Promise<AdminPublic | null> {
+    const res = await apiFetch('/api/auth/me');
+    if (res.status === 401) return null;
+    const data = await res.json();
+    if (!res.ok) return null;
+    return data.data;
+  },
+};
 
 export interface GenerateScenarioParams {
   scenarioType: ScenarioCategory;
@@ -10,7 +65,7 @@ export interface GenerateScenarioParams {
 export const vigiloAiService = {
   async generateScenario(params: GenerateScenarioParams) {
     try {
-      const response = await fetch('/api/vigilo-ai/generate-scenario', {
+      const response = await apiFetch('/api/vigilo-ai/generate-scenario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
@@ -46,7 +101,7 @@ export const vigiloAiService = {
 
   async analyzeCampaign(campaign: Campaign): Promise<AIAnalysis> {
     try {
-      const response = await fetch('/api/vigilo-ai/analyze-results', {
+      const response = await apiFetch('/api/vigilo-ai/analyze-results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,7 +155,7 @@ export const vigiloAiService = {
 
   async generateTraining(scenarioType: ScenarioCategory, vulnerabilityFocus: string): Promise<Partial<TrainingModule>> {
     try {
-      const response = await fetch('/api/vigilo-ai/generate-training', {
+      const response = await apiFetch('/api/vigilo-ai/generate-training', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenarioType, vulnerabilityFocus }),
@@ -148,5 +203,94 @@ export const vigiloAiService = {
   },
 };
 
+
+export const vigiloOrgService = {
+  async getSummary(): Promise<OrgSummary> {
+    const res = await apiFetch('/api/org/summary');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de charger le résumé org');
+    return data.data;
+  },
+
+  async listDepartments(): Promise<CompanyDepartment[]> {
+    const res = await apiFetch('/api/org/departments');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de charger les services');
+    return data.data;
+  },
+
+  async createDepartment(name: string): Promise<CompanyDepartment> {
+    const res = await apiFetch('/api/org/departments', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Création du service échouée');
+    return data.data;
+  },
+
+  async deleteDepartment(id: string): Promise<void> {
+    const res = await apiFetch(`/api/org/departments/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Suppression du service échouée');
+  },
+
+  async listEmployees(departmentId?: string): Promise<OrgEmployee[]> {
+    const q = departmentId ? `?departmentId=${encodeURIComponent(departmentId)}` : '';
+    const res = await apiFetch(`/api/org/employees${q}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de charger les collaborateurs');
+    return data.data;
+  },
+
+  async createEmployee(payload: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    departmentId: string;
+    role?: string;
+  }): Promise<OrgEmployee> {
+    const res = await apiFetch('/api/org/employees', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ajout collaborateur échoué');
+    return data.data;
+  },
+
+  async deleteEmployee(id: string): Promise<void> {
+    const res = await apiFetch(`/api/org/employees/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Suppression collaborateur échouée');
+  },
+};
+
 // Backwards compatibility alias
 export const rodiumAiService = vigiloAiService;
+
+export const vigiloTrainingService = {
+  async sendTrainingInvite(params: {
+    email: string;
+    firstName: string;
+    module: TrainingModule;
+    origin: string;
+  }): Promise<boolean> {
+    try {
+      const response = await apiFetch('/api/send-training-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      if (!response.ok) return false;
+      const data = await response.json();
+      return Boolean(data.success);
+    } catch {
+      return false;
+    }
+  },
+};

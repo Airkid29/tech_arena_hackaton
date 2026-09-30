@@ -3,17 +3,10 @@ import {
   X,
   Mail,
   MessageSquare,
-  ShieldAlert,
   ShieldCheck,
   AlertTriangle,
   GraduationCap,
-  ExternalLink,
-  Info,
   CheckCircle2,
-  Inbox,
-  ArrowRight,
-  PhoneCall,
-  Sparkles,
 } from 'lucide-react';
 import { Campaign, Scenario } from '../../types';
 import { WhatsAppSimulator } from './WhatsAppSimulator';
@@ -46,13 +39,9 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
   const currentCategory = campaign ? campaign.category : scenario?.category || 'Phishing';
   const isWhatsAppInitial = currentCategory === 'WhatsApp Phishing';
 
-  // Active Channel: 'email' | 'whatsapp'
   const [channel, setChannel] = useState<'email' | 'whatsapp'>(isWhatsAppInitial ? 'whatsapp' : 'email');
-
-  // View state: 'inbox' | 'landing_page_clicked' | 'reported_success'
   const [viewState, setViewState] = useState<'inbox' | 'landing_page_clicked' | 'reported_success'>(initialViewState);
 
-  // Sync channel if scenario changes
   useEffect(() => {
     if (currentCategory === 'WhatsApp Phishing') {
       setChannel('whatsapp');
@@ -76,10 +65,10 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
   ];
 
   const whatsAppRedFlags = [
-    'Numéro de mobile non enregistré dans l\'annuaire interne d\'entreprise',
-    'Usurpation d\'un dirigeant (Fraude au Président) ou d\'un support informatique',
+    "Numéro de mobile non enregistré dans l'annuaire interne d'entreprise",
+    "Usurpation d'un dirigeant (Fraude au Président) ou d'un support informatique",
     'Prétexte de réunion confidentielle ou NDA pour interdire tout appel vocal',
-    'Demande inhabituelle d\'action financière ou de clic sur un lien non sécurisé',
+    "Demande inhabituelle d'action financière ou de clic sur un lien non sécurisé",
   ];
 
   const activeRedFlags = channel === 'whatsapp' ? whatsAppRedFlags : emailRedFlags;
@@ -104,50 +93,82 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
     onStartTrainingFromTrap(currentCategory);
   };
 
+  const shell = isDark
+    ? 'border-white/15 bg-[#0f1419] text-slate-100'
+    : 'border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] shadow-xl';
+
+  const header = isDark
+    ? 'border-white/10 bg-slate-900/95'
+    : 'border-[var(--card-border)] bg-[var(--muted)]';
+
+  const bodyBg = isDark ? 'bg-[#0a0e14]' : 'bg-[var(--background)]';
+
+  const channelToggleWrap = isDark
+    ? 'bg-white/5 border-white/10'
+    : 'bg-[var(--surface-inset)] border-[var(--card-border)]';
+
+  const channelIdle = isDark ? 'text-slate-400 hover:text-white' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+
+  const titleCls = isDark ? 'text-white' : 'text-[var(--foreground)]';
+  const subtitleCls = isDark ? 'text-slate-400' : 'text-[var(--muted-foreground)]';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-4xl max-h-[92vh] rounded-2xl border border-white/15 bg-[#080b11] text-slate-100 shadow-2xl flex flex-col overflow-hidden">
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-white/10 bg-slate-900/90 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[#f2620a]/20 border border-[#f2620a]/40 text-[#fb923c] flex items-center justify-center font-bold text-xs">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-fade-in ${
+        isDark ? 'bg-black/80' : 'bg-slate-900/40'
+      }`}
+      data-vigilo-simulator-chrome
+    >
+      <div className={`relative w-full max-w-4xl max-h-[92vh] rounded-2xl border shadow-2xl flex flex-col overflow-hidden ${shell}`}>
+        <div className={`px-6 py-4 border-b flex items-center justify-between shrink-0 ${header}`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-[var(--primary)]/15 border border-[var(--primary)]/35 text-[var(--primary)] flex items-center justify-center font-bold text-xs shrink-0">
               LIVE
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-white text-sm">Aperçu Collaborateur — {currentScenarioName}</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`font-bold text-sm truncate ${titleCls}`}>
+                  Aperçu Collaborateur — {currentScenarioName}
+                </span>
+                <span
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded shrink-0 ${
+                    isDark
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  }`}
+                >
                   Mode Simulation
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className={`text-xs font-mono ${subtitleCls}`}>
                 Test de la réaction réelle du collaborateur sous pression
               </p>
             </div>
           </div>
 
-          {/* Channel selector */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center p-1 rounded-xl bg-white/5 border border-white/10 text-xs font-mono">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className={`flex items-center p-1 rounded-xl border text-xs font-mono ${channelToggleWrap}`}>
               <button
+                type="button"
                 onClick={() => {
                   setChannel('email');
                   setViewState('inbox');
                 }}
                 className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                  channel === 'email' ? 'bg-[#f2620a] text-white font-bold' : 'text-slate-400 hover:text-white'
+                  channel === 'email' ? 'bg-[var(--primary)] text-white font-bold' : channelIdle
                 }`}
               >
                 <Mail className="w-3.5 h-3.5" />
-                <span>Email (M365)</span>
+                <span className="hidden sm:inline">Email (M365)</span>
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setChannel('whatsapp');
                   setViewState('inbox');
                 }}
                 className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                  channel === 'whatsapp' ? 'bg-[#f2620a] text-white font-bold' : 'text-slate-400 hover:text-white'
+                  channel === 'whatsapp' ? 'bg-[var(--primary)] text-white font-bold' : channelIdle
                 }`}
               >
                 <MessageSquare className="w-3.5 h-3.5" />
@@ -156,77 +177,116 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
             </div>
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                isDark ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]'
+              }`}
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className={`${viewState === 'inbox' && channel === 'whatsapp' ? 'p-0 overflow-hidden' : 'p-6 overflow-y-auto space-y-6'} flex-1 bg-[#05070c] flex flex-col`}>
+        <div
+          className={`${
+            viewState === 'inbox' && channel === 'whatsapp' ? 'p-0 overflow-hidden' : 'p-6 overflow-y-auto space-y-6'
+          } flex-1 flex flex-col ${bodyBg}`}
+        >
           {viewState === 'inbox' && (
             <div className={`flex-1 flex flex-col ${channel === 'whatsapp' ? '' : 'space-y-6'}`}>
               {channel === 'email' ? (
-                /* Email View */
-                <div className="p-6 rounded-2xl border border-white/10 bg-slate-900 shadow-xl space-y-4">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4 text-xs font-mono text-slate-400">
+                <div
+                  className={`p-6 rounded-2xl border shadow-sm space-y-4 ${
+                    isDark ? 'border-white/10 bg-slate-900' : 'border-[var(--card-border)] bg-[var(--card)]'
+                  }`}
+                >
+                  <div
+                    className={`flex items-center justify-between border-b pb-4 text-xs font-mono ${subtitleCls} ${
+                      isDark ? 'border-white/10' : 'border-[var(--card-border)]'
+                    }`}
+                  >
                     <div>
-                      <div><strong className="text-white">De :</strong> {currentSenderName} &lt;{currentSenderEmail}&gt;</div>
-                      <div className="mt-1"><strong className="text-white">Objet :</strong> {currentSubject}</div>
+                      <div>
+                        <strong className={titleCls}>De :</strong> {currentSenderName} &lt;{currentSenderEmail}&gt;
+                      </div>
+                      <div className="mt-1">
+                        <strong className={titleCls}>Objet :</strong> {currentSubject}
+                      </div>
                     </div>
 
-                    {/* Report button */}
                     <button
+                      type="button"
                       onClick={handleSimulateReport}
-                      className="vigilo-btn-secondary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 text-emerald-400 border-emerald-500/30 cursor-pointer"
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border ${
+                        isDark
+                          ? 'bg-emerald-950/50 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/50'
+                          : 'bg-emerald-50 text-emerald-800 border-emerald-400 hover:bg-emerald-100'
+                      }`}
                     >
                       <ShieldCheck className="w-4 h-4" />
-                      <span>Signaler l'attaque</span>
+                      <span>Signaler l&apos;attaque</span>
                     </button>
                   </div>
 
-                  {/* Body preview */}
                   <div
-                    className="text-xs text-slate-200 leading-relaxed font-sans cursor-pointer p-4 bg-slate-950 rounded-xl border border-white/5"
+                    className={`text-xs leading-relaxed font-sans cursor-pointer p-4 rounded-xl border ${
+                      isDark
+                        ? 'text-slate-200 bg-slate-950 border-white/5'
+                        : 'text-[var(--foreground)] bg-[var(--surface-inset)] border-[var(--card-border)]'
+                    }`}
                     onClick={() => handleSimulateClickTrap()}
                     dangerouslySetInnerHTML={{ __html: currentBody }}
                   />
                 </div>
               ) : (
-                /* WhatsApp View */
                 <WhatsAppSimulator
                   onClickedTrap={handleSimulateClickTrap}
                   onReportedPhish={handleSimulateReport}
+                  isDark={isDark}
                 />
               )}
             </div>
           )}
 
           {viewState === 'landing_page_clicked' && (
-            /* Trap Clicked Awareness View */
-            <div className="p-8 rounded-2xl border border-rose-500/30 bg-rose-500/10 space-y-6 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center mx-auto">
+            <div
+              className={`p-8 md:p-10 rounded-2xl border-2 space-y-6 text-center mx-auto w-full max-w-2xl ${
+                isDark
+                  ? 'border-rose-500/40 bg-slate-900 shadow-inner'
+                  : 'border-rose-300 bg-rose-50/90 shadow-sm'
+              }`}
+            >
+              <div
+                className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${
+                  isDark ? 'bg-rose-500/25 border border-rose-400/50 text-rose-300' : 'bg-rose-100 border border-rose-300 text-rose-600'
+                }`}
+              >
                 <AlertTriangle className="w-8 h-8" />
               </div>
 
-              <div className="space-y-2 max-w-xl mx-auto">
-                <h3 className="text-2xl font-extrabold text-white">Ceci était une simulation VIGILO</h3>
-                <p className="text-sm text-slate-300">
-                  Vous avez cliqué sur un lien ou accepté une demande suspecte. Pas de panique, il s'agissait d'un exercice de prévention non punitif !
+              <div className="space-y-3 max-w-xl mx-auto">
+                <h3 className={`text-2xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-rose-950'}`}>
+                  Ceci était une simulation VIGILO
+                </h3>
+                <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                  Vous avez cliqué sur un lien ou accepté une demande suspecte. Pas de panique, il s&apos;agissait d&apos;un
+                  exercice de prévention non punitif !
                 </p>
               </div>
 
-              {/* Red Flags List */}
-              <div className="p-5 rounded-xl bg-slate-900 border border-white/10 text-left max-w-xl mx-auto space-y-2">
-                <h4 className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">
-                  Indices qu'il s'agissait d'un piège :
+              <div
+                className={`p-5 rounded-xl border text-left max-w-xl mx-auto space-y-2 ${
+                  isDark ? 'bg-[#05070c] border-white/10' : 'bg-white border-[var(--card-border)]'
+                }`}
+              >
+                <h4 className={`text-xs font-mono font-bold uppercase tracking-wider ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                  Indices qu&apos;il s&apos;agissait d&apos;un piège :
                 </h4>
-                <ul className="space-y-1.5 text-xs text-slate-300">
+                <ul className={`space-y-1.5 text-xs ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                   {activeRedFlags.map((flag, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <span className="text-rose-400 font-bold">•</span>
+                      <span className={`font-bold shrink-0 ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>•</span>
                       <span>{flag}</span>
                     </li>
                   ))}
@@ -234,8 +294,9 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
               </div>
 
               <button
+                type="button"
                 onClick={handleLaunchTargetTraining}
-                className="vigilo-btn-orange px-6 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2 cursor-pointer"
+                className="vigilo-btn-orange px-6 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2 cursor-pointer text-white"
               >
                 <GraduationCap className="w-4 h-4" />
                 <span>Suivre le micro-module de 2 minutes</span>
@@ -244,26 +305,56 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
           )}
 
           {viewState === 'reported_success' && (
-            /* Reported Success View */
-            <div className="p-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 space-y-6 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto">
+            <div
+              className={`p-8 md:p-10 rounded-2xl border-2 space-y-6 text-center mx-auto w-full max-w-2xl ${
+                isDark
+                  ? 'border-emerald-400/50 bg-gradient-to-b from-emerald-950/80 to-slate-900 shadow-lg'
+                  : 'border-emerald-400 bg-gradient-to-b from-emerald-50 to-white shadow-md'
+              }`}
+            >
+              <div
+                className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${
+                  isDark
+                    ? 'bg-emerald-500/30 border-2 border-emerald-400/60 text-emerald-200'
+                    : 'bg-emerald-100 border-2 border-emerald-500 text-emerald-700'
+                }`}
+              >
                 <CheckCircle2 className="w-8 h-8" />
               </div>
 
-              <div className="space-y-2 max-w-xl mx-auto">
-                <h3 className="text-2xl font-extrabold text-white">Excellent réflexe de sécurité !</h3>
-                <p className="text-sm text-slate-300">
-                  Vous avez identifié et signalé l'attaque avec succès. Votre geste protège l'ensemble de l'entreprise.
+              <div className="space-y-3 max-w-xl mx-auto">
+                <h3
+                  className={`text-2xl md:text-3xl font-extrabold tracking-tight ${
+                    isDark ? 'text-white' : 'text-emerald-950'
+                  }`}
+                >
+                  Excellent réflexe de sécurité !
+                </h3>
+                <p className={`text-base leading-relaxed ${isDark ? 'text-emerald-50/95' : 'text-slate-800'}`}>
+                  Vous avez identifié et signalé l&apos;attaque avec succès. Votre geste protège l&apos;ensemble de
+                  l&apos;entreprise.
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-900 border border-white/10 text-xs font-mono text-emerald-400 max-w-md mx-auto">
-                +15 Points de Vigilance Humaine attribués à votre cohorte !
+              <div
+                className={`p-4 rounded-xl border text-sm font-semibold max-w-md mx-auto ${
+                  isDark
+                    ? 'bg-emerald-900/60 border-emerald-500/40 text-emerald-100'
+                    : 'bg-white border-emerald-300 text-emerald-900 shadow-sm'
+                }`}
+              >
+                <span className="font-mono text-[var(--primary)]">+15</span> Points de Vigilance Humaine attribués à
+                votre cohorte !
               </div>
 
               <button
+                type="button"
                 onClick={onClose}
-                className="vigilo-btn-secondary px-6 py-2.5 rounded-xl text-xs font-bold cursor-pointer"
+                className={`px-6 py-2.5 rounded-xl text-sm font-bold cursor-pointer border transition-colors ${
+                  isDark
+                    ? 'bg-white/10 border-white/20 text-white hover:bg-white/15'
+                    : 'bg-[var(--foreground)] text-[var(--background)] border-transparent hover:opacity-90'
+                }`}
               >
                 Fermer le simulateur
               </button>

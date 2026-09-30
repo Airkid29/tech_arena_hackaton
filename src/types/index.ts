@@ -11,14 +11,50 @@ export type DifficultyLevel = 'Facile' | 'Moyen' | 'Difficile';
 export type CampaignStatus = 'brouillon' | 'planifiée' | 'en_cours' | 'terminée';
 export type AppViewMode = 'landing' | 'app' | 'login';
 
+export type TrainingAssignmentStatus = 'envoyé' | 'complété';
+
+export interface EmployeeTrainingAssignment {
+  moduleId: string;
+  moduleTitle: string;
+  assignedAt: string;
+  channel: 'Email' | 'WhatsApp';
+  status: TrainingAssignmentStatus;
+}
+
 export interface Employee {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
+  /** Display name resolved from CompanyDepartment */
   department: string;
+  /** API department id (org store) */
+  departmentId?: string;
   role: string;
   riskScore: number;
+  trainingAssignments?: EmployeeTrainingAssignment[];
+}
+
+/** Company org unit (RH, Comptabilité…) — not a simulation module */
+export interface CompanyDepartment {
+  id: string;
+  adminId: string;
+  name: string;
+  createdAt: string;
+}
+
+/** Raw employee as returned by /api/org/employees */
+export interface OrgEmployee {
+  id: string;
+  adminId: string;
+  departmentId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  riskScore: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface FlashArticle {
@@ -112,6 +148,10 @@ export interface Campaign {
   isReTest?: boolean;
   baselineCampaignId?: string;
   associatedTrainingId?: string;
+  /** Selected org employee IDs for this campaign */
+  targetEmployeeIds?: string[];
+  /** Org department IDs explicitly selected (people may be excluded individually) */
+  targetDepartmentIds?: string[];
 }
 
 export interface Scenario {
@@ -195,6 +235,40 @@ export interface ReTestRecord {
   };
 }
 
+export type CompanySize = '1-10' | '11-50' | '51-100' | '101-150' | '150+';
+
+export interface OrgSummary {
+  companySize: CompanySize;
+  maxEmployees: number;
+  employeeCount: number;
+  remainingSlots: number;
+  departmentCount: number;
+  byDepartment: Array<{
+    departmentId: string;
+    name: string;
+    employeeCount: number;
+  }>;
+}
+
+
+export type VigiloService =
+  | 'Phishing'
+  | 'Fake Invoice'
+  | 'WhatsApp Phishing'
+  | 'Smishing'
+  | 'MFA Fatigue'
+  | 'Social Engineering'
+  | 'QR Code (Quishing)';
+
+export interface AdminPublic {
+  id: string;
+  email: string;
+  companyName: string;
+  companySize: CompanySize;
+  services: VigiloService[];
+  createdAt: string;
+}
+
 export interface SimulationProviderSettings {
   provider: 'mock' | 'gophish';
   gophishUrl: string;
@@ -206,4 +280,6 @@ export interface SimulationProviderSettings {
   };
   companyName: string;
   companyDomain: string;
+  companySize?: CompanySize;
+  services?: VigiloService[];
 }

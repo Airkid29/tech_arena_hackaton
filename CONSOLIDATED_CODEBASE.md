@@ -5572,13 +5572,13 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
 
   const categories = [
     { id: 'all', label: 'Toutes les formations' },
-    { id: 'WhatsApp Phishing', label: '💬 WhatsApp (Whishing)' },
-    { id: 'Phishing', label: '✉️ Phishing M365' },
-    { id: 'Fake Invoice', label: '📄 Fake Invoice (RIB)' },
-    { id: 'QR Code (Quishing)', label: '📱 Quishing (QR Code)' },
-    { id: 'MFA Fatigue', label: '🔔 MFA Fatigue' },
-    { id: 'Ransomware', label: '🔒 Ransomware & Macros' },
-    { id: 'Social Engineering', label: '👤 Social Engineering' },
+    { id: 'WhatsApp Phishing', label: ' WhatsApp (Whishing)' },
+    { id: 'Phishing', label: ' Phishing M365' },
+    { id: 'Fake Invoice', label: ' Fake Invoice (RIB)' },
+    { id: 'QR Code (Quishing)', label: ' Quishing (QR Code)' },
+    { id: 'MFA Fatigue', label: ' MFA Fatigue' },
+    { id: 'Ransomware', label: ' Ransomware & Macros' },
+    { id: 'Social Engineering', label: ' Social Engineering' },
   ];
 
   return (

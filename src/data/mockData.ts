@@ -807,6 +807,8 @@ export const INITIAL_SETTINGS: SimulationProviderSettings = {
   },
   companyName: 'Acme Conseil & Solutions',
   companyDomain: 'acme-conseil.fr',
+  companySize: '11-50',
+  services: ['Phishing', 'WhatsApp Phishing'],
 };
 
 export const INITIAL_FLASH_ARTICLES: FlashArticle[] = [

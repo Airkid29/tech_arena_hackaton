@@ -10,6 +10,9 @@ import { GenerateScenarioModal } from './components/scenarios/GenerateScenarioMo
 import { AiCoachView } from './components/ai-coach/AiCoachView';
 import { TrainingView } from './components/training/TrainingView';
 import { InteractiveTrainingPlayer } from './components/training/InteractiveTrainingPlayer';
+import { EditTrainingModal } from './components/training/EditTrainingModal';
+import { AssignTrainingModal } from './components/training/AssignTrainingModal';
+import { vigiloTrainingService, vigiloAuthService, vigiloOrgService } from './services/api';
 import { ReTestView } from './components/retest/ReTestView';
 import { SettingsView } from './components/settings/SettingsView';
 import { FlashNewsView } from './components/flash-news/FlashNewsView';
@@ -24,7 +27,6 @@ import {
   INITIAL_RETEST_RECORD,
   INITIAL_SETTINGS,
   INITIAL_FLASH_ARTICLES,
-  INITIAL_EMPLOYEES,
 } from './data/mockData';
 import {
   Campaign,
@@ -36,11 +38,17 @@ import {
   AppViewMode,
   FlashArticle,
   Employee,
+  AdminPublic,
+  CompanyDepartment,
 } from './types';
 import { Language } from './i18n/translations';
 
 export default function App() {
   const [viewMode, setViewMode] = useState<AppViewMode>('landing');
+  const [admin, setAdmin] = useState<AdminPublic | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [orgDepartments, setOrgDepartments] = useState<CompanyDepartment[]>([]);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
 
@@ -72,6 +80,79 @@ export default function App() {
     }
   }, [theme]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await vigiloAuthService.me();
+        if (!cancelled) {
+          setAdmin(me);
+          if (me) setViewMode('app');
+        }
+      } catch {
+        // réseau / JSON : rester déconnecté
+      } finally {
+        if (!cancelled) setAuthChecking(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'app' && !admin && !authChecking) {
+      setViewMode('login');
+    }
+  }, [viewMode, admin, authChecking]);
+
+  // Prefetch org employees after login (Directory refreshes again on enter)
+  useEffect(() => {
+    if (!admin) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [depts, orgEmps] = await Promise.all([
+          vigiloOrgService.listDepartments(),
+          vigiloOrgService.listEmployees(),
+        ]);
+        if (cancelled) return;
+        setOrgDepartments(depts);
+        setEmployees((prev) => {
+          const prevById = new Map(prev.map((e) => [e.id, e]));
+          return orgEmps.map((emp) => {
+            const dept = depts.find((d) => d.id === emp.departmentId);
+            const p = prevById.get(emp.id);
+            return {
+              id: emp.id,
+              firstName: emp.firstName,
+              lastName: emp.lastName,
+              email: emp.email,
+              department: dept?.name || '—',
+              departmentId: emp.departmentId,
+              role: emp.role,
+              riskScore: emp.riskScore,
+              trainingAssignments: p?.trainingAssignments,
+            };
+          });
+        });
+      } catch {
+        // Directory shows error when opened
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [admin?.id]);
+
+  const handleLogout = async () => {
+    try {
+      await vigiloAuthService.logout();
+    } catch {
+      // ignore network errors on logout
+    }
+    setAdmin(null);
+    setEmployees([]);
+    setOrgDepartments([]);
+    setViewMode('landing');
+  };
+
   // Core Data
   const [campaigns, setCampaigns] = useState<Campaign[]>(INITIAL_CAMPAIGNS);
   const [scenarios, setScenarios] = useState<Scenario[]>(INITIAL_SCENARIOS);
@@ -79,7 +160,6 @@ export default function App() {
   const [retestRecord, setRetestRecord] = useState<ReTestRecord>(INITIAL_RETEST_RECORD);
   const [settings, setSettings] = useState<SimulationProviderSettings>(INITIAL_SETTINGS);
   const [flashArticles, setFlashArticles] = useState<FlashArticle[]>(INITIAL_FLASH_ARTICLES);
-  const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
 
   // Modals & Sub-flows
   const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
@@ -94,10 +174,23 @@ export default function App() {
   const [simulatedScenario, setSimulatedScenario] = useState<Scenario | null>(null);
 
   const [activeInteractiveTraining, setActiveInteractiveTraining] = useState<TrainingModule | null>(null);
+  const [trainingToEdit, setTrainingToEdit] = useState<TrainingModule | null>(null);
+  const [trainingToAssign, setTrainingToAssign] = useState<TrainingModule | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Magic Link Trap Check
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const trainingId = params.get('trainingId');
+    if (trainingId) {
+      const mod = INITIAL_TRAININGS.find((t) => t.id === trainingId);
+      if (mod) {
+        setViewMode('app');
+        setActiveTab('training');
+        setActiveInteractiveTraining(mod);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
     if (params.get('trap') === 'true') {
       const scenId = params.get('scenarioId');
       const scen = INITIAL_SCENARIOS.find(s => s.id === scenId || s.category === scenId) || INITIAL_SCENARIOS[0];
@@ -280,6 +373,75 @@ export default function App() {
           : t
       )
     );
+    setEmployees((prev) =>
+      prev.map((emp) => {
+        const assignments = emp.trainingAssignments;
+        if (!assignments?.some((a) => a.moduleId === moduleId && a.status === 'envoyé')) {
+          return emp;
+        }
+        return {
+          ...emp,
+          trainingAssignments: assignments.map((a) =>
+            a.moduleId === moduleId && a.status === 'envoyé' ? { ...a, status: 'complété' as const } : a
+          ),
+        };
+      })
+    );
+  };
+
+  const handleUpdateTraining = (updated: TrainingModule) => {
+    setTrainings((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  };
+
+  const handleAssignTraining = async (
+    moduleId: string,
+    employeeIds: string[],
+    channel: 'Email' | 'WhatsApp'
+  ): Promise<{ success: boolean; sentCount: number }> => {
+    const mod = trainings.find((t) => t.id === moduleId);
+    if (!mod || employeeIds.length === 0) {
+      return { success: false, sentCount: 0 };
+    }
+
+    const targets = employees.filter((e) => employeeIds.includes(e.id));
+    const origin = window.location.origin;
+    const assignedAt = new Date().toISOString();
+
+    for (const emp of targets) {
+      if (channel === 'Email') {
+        await vigiloTrainingService.sendTrainingInvite({
+          email: emp.email,
+          firstName: emp.firstName,
+          module: mod,
+          origin,
+        });
+      }
+    }
+
+    setTrainings((prev) =>
+      prev.map((t) =>
+        t.id === moduleId ? { ...t, totalAssigned: t.totalAssigned + targets.length } : t
+      )
+    );
+
+    setEmployees((prev) =>
+      prev.map((emp) => {
+        if (!employeeIds.includes(emp.id)) return emp;
+        const entry = {
+          moduleId: mod.id,
+          moduleTitle: mod.title,
+          assignedAt,
+          channel,
+          status: 'envoyé' as const,
+        };
+        return {
+          ...emp,
+          trainingAssignments: [...(emp.trainingAssignments || []), entry],
+        };
+      })
+    );
+
+    return { success: true, sentCount: targets.length };
   };
 
   // Flash News Handlers
@@ -313,10 +475,20 @@ export default function App() {
   const activeCampaignCount = campaigns.filter((c) => c.status === 'en_cours').length;
   const isDark = theme === 'dark';
 
+  if (authChecking) {
+    return (
+      <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)] text-[var(--muted-foreground)] text-sm">
+          Vérification de session…
+        </div>
+      </div>
+    );
+  }
+
   // 1. IF VIEW MODE IS LANDING: Display clean, non-AI-slop landing page with working i18n & theme
   if (viewMode === 'landing') {
     return (
-      <div className={isDark ? 'dark' : ''}>
+      <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
         <LandingPage
           onEnterDashboard={() => setViewMode('login')}
           onOpenLiveSimulator={() => handleOpenSimulator()}
@@ -366,9 +538,18 @@ export default function App() {
 
   if (viewMode === 'login') {
     return (
-      <div className={isDark ? 'dark' : ''}>
+      <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
         <AdminLogin
-          onLogin={() => setViewMode('app')}
+          onLogin={(a) => {
+            setAdmin(a);
+            setSettings((prev) => ({
+              ...prev,
+              companyName: a.companyName,
+              companySize: a.companySize,
+              services: a.services,
+            }));
+            setViewMode('app');
+          }}
           onBack={() => setViewMode('landing')}
         />
       </div>
@@ -377,23 +558,26 @@ export default function App() {
 
   // 2. APP VIEW MODE (Full-featured Console & Resilience Engine)
   return (
-    <div className={`min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white transition-colors ${
-      isDark ? 'dark bg-[var(--background)] text-[var(--foreground)]' : 'bg-[var(--background)] text-[var(--foreground)]'
-    }`}>
+    <div
+      data-vigilo-theme={theme}
+      className={`min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white transition-colors ${
+        isDark ? 'dark bg-[var(--background)] text-[var(--foreground)]' : 'bg-[var(--background)] text-[var(--foreground)]'
+      }`}
+    >
       {/* Top Header */}
       <Navbar
         activeTab={activeTab}
         onOpenEmployeeSimulator={() => handleOpenSimulator()}
-        onGoToLanding={() => setViewMode('landing')}
+        onGoToLanding={handleLogout}
         settings={settings}
         language={language}
         onToggleLanguage={handleToggleLanguage}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        onOpenMobileNav={() => setMobileNavOpen(true)}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Navigation Sidebar */}
+      <div className="flex-1 flex overflow-hidden relative">
         <Sidebar
           activeTab={activeTab}
           onTabChange={(tab) => {
@@ -402,14 +586,15 @@ export default function App() {
               setSelectedCampaignId(null);
             }
           }}
-          onGoToLanding={() => setViewMode('landing')}
+          onGoToLanding={handleLogout}
           activeCampaignCount={activeCampaignCount}
           language={language}
           theme={theme}
+          mobileOpen={mobileNavOpen}
+          onMobileClose={() => setMobileNavOpen(false)}
         />
 
-        {/* Main Content Workspace */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 md:p-8 min-w-0 w-full">
           {activeTab === 'overview' && (
             <OverviewTab
               campaigns={campaigns}
@@ -474,12 +659,7 @@ export default function App() {
           {activeTab === 'directory' && (
             <DirectoryView
               employees={employees}
-              onAddEmployee={(newEmp) => {
-                setEmployees((prev) => [{ ...newEmp, id: `emp-${Date.now()}`, riskScore: Math.floor(Math.random() * 40) + 10 }, ...prev]);
-              }}
-              onRemoveEmployee={(id) => {
-                setEmployees((prev) => prev.filter(e => e.id !== id));
-              }}
+              onEmployeesChange={setEmployees}
             />
           )}
 
@@ -487,7 +667,8 @@ export default function App() {
             <TrainingView
               trainings={trainings}
               onOpenPlayer={(mod) => setActiveInteractiveTraining(mod)}
-              onNavigateToReTest={() => setActiveTab('retest')}
+              onEditModule={(mod) => setTrainingToEdit(mod)}
+              onAssignModule={(mod) => setTrainingToAssign(mod)}
             />
           )}
 
@@ -528,6 +709,7 @@ export default function App() {
         onClose={() => setIsCreateCampaignOpen(false)}
         scenarios={scenarios}
         employees={employees}
+        departments={orgDepartments}
         onCreate={handleCreateCampaign}
         preselectedScenarioId={createCampaignScenarioId}
         isReTestMode={isReTestCreateMode}
@@ -554,6 +736,21 @@ export default function App() {
         onStartTrainingFromTrap={handleStartTrainingFromTrap}
         initialViewState={simulatorInitialViewState}
         isDark={isDark}
+      />
+
+      <EditTrainingModal
+        isOpen={Boolean(trainingToEdit)}
+        module={trainingToEdit}
+        onClose={() => setTrainingToEdit(null)}
+        onSave={handleUpdateTraining}
+      />
+
+      <AssignTrainingModal
+        isOpen={Boolean(trainingToAssign)}
+        module={trainingToAssign}
+        employees={employees}
+        onClose={() => setTrainingToAssign(null)}
+        onAssign={handleAssignTraining}
       />
 
       {/* 4. Interactive Micro-training Player Modal */}

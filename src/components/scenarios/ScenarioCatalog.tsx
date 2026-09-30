@@ -74,11 +74,11 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
 
   const categories = [
     { id: 'all', label: 'Tous les scénarios' },
-    { id: 'WhatsApp Phishing', label: '💬 WhatsApp (Whishing)' },
-    { id: 'Phishing', label: '✉️ Phishing Email' },
-    { id: 'Fake Invoice', label: '📄 Fake Invoice' },
-    { id: 'Smishing', label: '📱 Smishing (SMS)' },
-    { id: 'MFA Fatigue', label: '🔔 MFA Fatigue' },
+    { id: 'WhatsApp Phishing', label: ' WhatsApp (Whishing)' },
+    { id: 'Phishing', label: ' Phishing Email' },
+    { id: 'Fake Invoice', label: ' Fake Invoice' },
+    { id: 'Smishing', label: ' Smishing (SMS)' },
+    { id: 'MFA Fatigue', label: ' MFA Fatigue' },
   ];
 
   return (

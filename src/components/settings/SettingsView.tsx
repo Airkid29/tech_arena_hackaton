@@ -5,11 +5,6 @@ import {
   Building2,
   Shield,
   CheckCircle2,
-  Key,
-  Globe,
-  Sliders,
-  AlertCircle,
-  Eye,
 } from 'lucide-react';
 import { SimulationProviderSettings } from '../../types';
 
@@ -43,159 +38,156 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setTimeout(() => setSavedNotification(false), 3000);
   };
 
+  const cardClass = 'p-4 sm:p-6 rounded-xl border border-[var(--card-border)] bg-[var(--card)] space-y-4 shadow-sm';
+
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      {/* Header */}
+    <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto pb-8">
       <div>
-        <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-          <Settings className="w-5 h-5 text-blue-400" />
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--foreground)] flex items-center gap-2">
+          <Settings className="w-5 h-5 text-[var(--primary)] shrink-0" />
           <span>Paramètres de la plateforme VIGILO</span>
         </h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Configurez le moteur de simulation, l'environnement de l'entreprise et les politiques d'exercice.
+        <p className="text-sm text-[var(--muted-foreground)] mt-2 leading-relaxed">
+          Configurez le moteur de simulation, l&apos;identité de votre PME et les options d&apos;exercice cyber.
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6 text-xs">
-        {/* Simulation Provider selection (Mock vs Gophish per specs) */}
-        <div className="p-6 rounded-xl border border-slate-800 bg-[#0d131f] space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Server className="w-4 h-4 text-blue-400" />
-              <span>Moteur de simulation (Simulation Engine)</span>
+      <form onSubmit={handleSave} className="space-y-5 sm:space-y-6 text-sm">
+        <div className={cardClass}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h3 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
+              <Server className="w-4 h-4 text-[var(--primary)]" />
+              Moteur de simulation
             </h3>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+            <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800 w-fit">
               Opérationnel
             </span>
           </div>
 
-          <p className="text-slate-400 text-xs">
-            Choisissez entre le <strong>Mock Simulation Provider</strong> (idéal pour la démonstration immédiate et le test du parcours collaborateur) et le <strong>Gophish Provider</strong> (intégration autorisée d'un serveur d'envoi réel).
+          <p className="text-[var(--muted-foreground)] text-sm leading-relaxed">
+            <strong className="text-[var(--foreground)]">Mock</strong> : démo et parcours collaborateur sans serveur externe.{' '}
+            <strong className="text-[var(--foreground)]">Gophish</strong> : envoi réel via votre instance autorisée.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            <div
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
               onClick={() => setProvider('mock')}
-              className={`p-4 rounded-xl border cursor-pointer transition-all space-y-2 ${
+              className={`p-4 rounded-xl border text-left transition-all space-y-2 cursor-pointer ${
                 provider === 'mock'
-                  ? 'border-blue-500 bg-blue-950/30'
-                  : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
+                  ? 'border-[var(--primary)] bg-[var(--primary)]/10 ring-1 ring-[var(--primary)]/30'
+                  : 'border-[var(--card-border)] bg-[var(--surface-inset)] hover:border-[var(--primary)]/40'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-200 text-sm">Mock Simulation Provider</span>
-                {provider === 'mock' && <CheckCircle2 className="w-4 h-4 text-blue-400" />}
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-[var(--foreground)]">Mock Provider</span>
+                {provider === 'mock' && <CheckCircle2 className="w-4 h-4 text-[var(--primary)] shrink-0" />}
               </div>
-              <p className="text-slate-400 text-[11px] leading-relaxed">
-                Recommandé pour la démonstration sans dépendance externe. Simule la boîte de messagerie, les clics et le plugin de signalement.
+              <p className="text-[var(--muted-foreground)] text-xs leading-relaxed">
+                Recommandé hackathon / pilote. Simule inbox, clics et signalements.
               </p>
-            </div>
+            </button>
 
-            <div
+            <button
+              type="button"
               onClick={() => setProvider('gophish')}
-              className={`p-4 rounded-xl border cursor-pointer transition-all space-y-2 ${
+              className={`p-4 rounded-xl border text-left transition-all space-y-2 cursor-pointer ${
                 provider === 'gophish'
-                  ? 'border-blue-500 bg-blue-950/30'
-                  : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
+                  ? 'border-[var(--primary)] bg-[var(--primary)]/10 ring-1 ring-[var(--primary)]/30'
+                  : 'border-[var(--card-border)] bg-[var(--surface-inset)] hover:border-[var(--primary)]/40'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-200 text-sm">Gophish API Provider</span>
-                {provider === 'gophish' && <CheckCircle2 className="w-4 h-4 text-blue-400" />}
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-[var(--foreground)]">Gophish API</span>
+                {provider === 'gophish' && <CheckCircle2 className="w-4 h-4 text-[var(--primary)] shrink-0" />}
               </div>
-              <p className="text-slate-400 text-[11px] leading-relaxed">
-                Connecteur API officiel pour serveur Gophish d'entreprise (contexte autorisé uniquement).
+              <p className="text-[var(--muted-foreground)] text-xs leading-relaxed">
+                Connexion à un serveur Gophish d&apos;entreprise (contexte autorisé).
               </p>
-            </div>
+            </button>
           </div>
 
-          {/* Gophish settings if active */}
           {provider === 'gophish' && (
-            <div className="p-4 rounded-lg bg-slate-900/80 border border-slate-800 space-y-3 pt-3 animate-in fade-in">
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-300">URL du serveur Gophish</label>
+            <div className="p-4 rounded-lg vigilo-inset space-y-3 animate-in fade-in">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[var(--foreground)]">URL du serveur Gophish</label>
                 <input
-                  type="text"
+                  type="url"
                   value={gophishUrl}
                   onChange={(e) => setGophishUrl(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="vigilo-input w-full px-3 py-2 rounded-lg text-sm"
+                  placeholder="https://gophish.votre-entreprise.tg"
                 />
               </div>
-
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-300">Clé API Gophish (Admin Token)</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[var(--foreground)]">Clé API (Admin Token)</label>
                 <input
                   type="password"
                   value={gophishApiKey}
                   onChange={(e) => setGophishApiKey(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 font-mono"
+                  className="vigilo-input w-full px-3 py-2 rounded-lg text-sm font-mono"
                 />
               </div>
             </div>
           )}
         </div>
 
-        {/* Company Settings */}
-        <div className="p-6 rounded-xl border border-slate-800 bg-[#0d131f] space-y-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-blue-400" />
-            <span>Organisation PME cible</span>
+        <div className={cardClass}>
+          <h3 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-[var(--primary)]" />
+            Organisation PME
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-300">Nom de l'entreprise</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[var(--foreground)]">Nom de l&apos;entreprise</label>
               <input
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500"
+                className="vigilo-input w-full px-3 py-2 rounded-lg text-sm"
               />
             </div>
-
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-300">Domaine de messagerie officiel</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[var(--foreground)]">Domaine email officiel</label>
               <input
                 type="text"
                 value={companyDomain}
                 onChange={(e) => setCompanyDomain(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500"
+                className="vigilo-input w-full px-3 py-2 rounded-lg text-sm"
+                placeholder="entreprise.tg"
               />
             </div>
           </div>
         </div>
 
-        {/* AI & Security Policy Notice */}
-        <div className="p-6 rounded-xl border border-slate-800 bg-[#0d131f] space-y-3">
-          <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
-            <Shield className="w-4 h-4 text-emerald-400" />
-            <span>Architecture sécurisée RodiumAI</span>
+        <div className={cardClass}>
+          <div className="flex items-center gap-2 text-[var(--foreground)] font-bold text-sm">
+            <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            Sécurité RodiumAI / Gemini
           </div>
-
-          <p className="text-slate-400 leading-relaxed text-xs">
-            Conformément aux spécifications de sécurité VIGILO, les clés d'API (RodiumAI / Gemini) sont gérées exclusivement côté serveur via les variables d'environnement (<code>process.env.GEMINI_API_KEY</code>). Aucune clé secrète n'est exposée au navigateur.
+          <p className="text-[var(--muted-foreground)] leading-relaxed text-sm">
+            Les clés API sont stockées côté serveur (<code className="text-xs bg-[var(--muted)] px-1 py-0.5 rounded">GEMINI_API_KEY</code>,{' '}
+            <code className="text-xs bg-[var(--muted)] px-1 py-0.5 rounded">RODIUM_API_KEY</code>). Aucun secret n&apos;est exposé au navigateur.
           </p>
-
-          <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-mono pt-1">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Serveur proxy backend actif · User-Agent aistudio-build vérifié</span>
+          <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-mono">
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+            <span>Proxy backend actif</span>
           </div>
         </div>
 
-        {/* Submit */}
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
           {savedNotification ? (
-            <span className="text-xs text-emerald-400 font-medium flex items-center gap-1.5 animate-in fade-in">
+            <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
-              <span>Paramètres enregistrés avec succès.</span>
+              Paramètres enregistrés.
             </span>
           ) : (
-            <span />
+            <span className="hidden sm:block" />
           )}
-
           <button
             type="submit"
-            className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md shadow-blue-900/40 cursor-pointer transition-all"
+            className="vigilo-btn-orange w-full sm:w-auto px-5 py-2.5 rounded-lg font-semibold text-sm text-white cursor-pointer"
           >
             Enregistrer les modifications
           </button>

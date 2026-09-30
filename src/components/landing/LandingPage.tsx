@@ -8,9 +8,10 @@ import {
   Eye,
   Server,
   Smartphone,
-  ChevronRight,
   Sparkles,
   RotateCcw,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { translations, Language } from '../../i18n/translations';
 
@@ -30,8 +31,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenLiveSimulator,
   language,
   onToggleLanguage,
+  theme,
+  onToggleTheme,
 }) => {
   const t = translations[language];
+  const isDark = theme === 'dark';
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans selection:bg-[var(--primary)] selection:text-white">
@@ -81,6 +85,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 EN
               </button>
             </div>
+
+            <button
+              onClick={onToggleTheme}
+              className="p-2 rounded-lg vigilo-chrome-btn cursor-pointer"
+              title={t.nav.switchTheme}
+              type="button"
+            >
+              {isDark ? (
+                <Sun className="w-4 h-4 text-amber-500" />
+              ) : (
+                <Moon className="w-4 h-4 text-[var(--muted-foreground)]" />
+              )}
+            </button>
             
             <button
               onClick={onEnterDashboard}
@@ -214,7 +231,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <p className="text-sm leading-relaxed mb-6">
               "Salut, je suis en réunion avec un client. J'ai besoin d'un virement urgent de 500.000 F CFA à valider immédiatement par ce lien pour débloquer le contrat."
             </p>
-            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-xs flex items-start gap-2">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 p-3 rounded-lg text-xs flex items-start gap-2">
               <span className="font-bold shrink-0">VIGILO :</span>
               Ceci est un test d'Ingénierie Sociale. L'urgence et l'autorité sont utilisées pour vous piéger.
             </div>
