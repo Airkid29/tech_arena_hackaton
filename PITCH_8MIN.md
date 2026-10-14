@@ -1,122 +1,111 @@
-# 🏆 GUIDE PITCH MASTERCLASS 8 MINUTES — VIGILO SaaS B2B
+# VIGILO — Pitch de quart de finale AI4Youth-Lomé 2026
 
-> **Présentation Hackathon Tech Arena 2026**  
-> **Sujet** : VIGILO — Plateforme SaaS de Gestion du Risque Cyber Humain par Simulation & Coaching IA  
-> **Durée** : 8 minutes chrono + Session Q&A Jury
+**Format :** 8 minutes de pitch et démonstration, puis 2 minutes de questions.
 
----
+**Objectif du jury à cette étape :** impact et pertinence (30 %), centralité de l’IA (35 %), faisabilité et clarté technique (25 %), qualité/complétude du pitch (10 %).
+**Important :** aucun livrable n’est exigé aux quarts de finale selon la charte. Ce script sert à l’oral ; adapter les éléments entre crochets avec les informations réelles de l’équipe.
 
-## ⏱️ Chronogramme de la Présentation (Minute par Minute)
+## Fil rouge
 
-```
-[00:00 - 01:00] 💥 1. L'ACCROCHE & LE PROBLÈME (La faille humaine dans les PME)
-[01:00 - 02:30] 💡 2. LA SOLUTION VIGILO & LA BOUCLE EN 5 ÉTAPES
-[02:30 - 05:00] 🖥️ 3. DÉMONSTRATION INTERACTIVE EN DIRECT (DEMO LIVE)
-[05:00 - 06:30] 📊 4. ROI, BUSINESS MODEL & DIFFÉRENCIATION (vs KnowBe4)
-[06:30 - 08:00] 🛡️ 5. CONFORMITÉ ANCy / RGPD & CONCLUSION PERCUTANTE
-```
+Suivre un seul cas du début à la fin : un message WhatsApp urgent prétendant venir d’un dirigeant, puis montrer comment une PME peut entraîner ses collaborateurs à le vérifier et mesurer leur progression. Présenter le cas comme une **simulation pédagogique contrôlée**, jamais comme une attaque réelle.
 
----
+## Script minuté
 
-## 🎤 SCRIPT MOT-À-MOT POUR L'ORATEUR (FRANÇAIS)
+### 0:00–0:50 — Le problème et l’impact
 
-### 💥 MINUTE 0:00 - 1:00 | L'Accroche & Le Drame de la PME
+> « Imaginez une PME de Lomé. Une personne de l’équipe finance reçoit un message urgent qui semble venir de la direction et demande de valider un paiement. Elle hésite : comment savoir si son équipe reconnaîtra la pression et vérifiera l’identité de l’expéditeur ?
+> Les petites entreprises ont rarement un spécialiste cyber ou le temps de suivre des formations longues. Pourtant, un seul réflexe — vérifier par un canal indépendant et signaler — peut interrompre une fraude. VIGILO part de ce besoin concret : entraîner les comportements, pas seulement diffuser des conseils. »
 
-> *"Messieurs et Mesdames les membres du jury,*
-> 
-> *Imaginez un lundi matin à 9h. Le directeur financier d'une PME de 40 salariés reçoit un message WhatsApp d'apparence anodine de son PDG : 'Je suis en réunion client urgente, peux-tu valider ce virement confidentiel de 4 800F CFA avant 10h ?' En 30 secondes, le piège se referme. L'argent part sur un compte frauduleux.*
-> 
-> *Aujourd'hui, **90% des cyberattaques qui réussissent n'exploitent pas une faille logicielle, mais une vulnérabilité humaine**. Les PME investissent des milliers d'euros dans des pare-feux et des antivirus sophistiqués, mais négligent le maillon le plus ciblé : **leurs propres collaborateurs**.*
-> 
-> *Les formations traditionnelles d'une heure par an en e-learning sont ennuyeuses, théoriques et rapidement oubliées. C'est pour résoudre ce défi vital que nous avons créé **VIGILO**."*
+**À l’écran :** afficher le titre VIGILO et la boucle Simuler → Mesurer → Analyser → Former → Re-tester.
 
----
+**À ne pas dire sans source vérifiable :** « 80/90 % des attaques réussies passent par l’humain » ou un montant moyen de fraude comme s’il s’agissait de données établies pour le Togo. Si une statistique est ajoutée, citer sa source et son périmètre.
 
-### 💡 MINUTE 1:00 - 2:30 | La Solution VIGILO & La Boucle en 5 Étapes
+### 0:50–1:35 — La solution
 
-> *"VIGILO est la première plateforme SaaS B2B de cyber-résilience humaine conçue spécifiquement pour les PME.*
-> 
-> *Plutôt que d'imposer des cours théoriques inefficaces, VIGILO instaure un **apprentissage continu et bienveillant en 5 étapes clés** :*
-> 
-> 1. **Simuler** : Nous envoyons des pièges hyper-réalistes sur les vrais canaux du quotidien : Email (Microsoft 365, fausses factures) et **WhatsApp Whishing** (notre nouveauté v2.4).
-> 2. **Mesurer** : Nous capturons les réactions réelles en temps réel : qui clique, et surtout, qui a le réflexe de signaler l'attaque en 1 clic.
-> 3. **Analyser** : Notre Coach IA alimenté par **Gemini 2.5 Flash** analyse instantanément les leviers psychologiques (Urgence, Autorité, Curiosité) ayant provoqué l'erreur.
-> 4. **Former** : Le collaborateur piégé est immédiatement redirigé vers un **micro-training de 2 minutes**, ultra-ciblé sur son erreur.
-> 5. **Re-tester** : 14 jours plus tard, VIGILO relance une simulation de validation pour prouver l'ancrage du réflexe de vigilance.*
-> 
-> *Passons tout de suite à la démonstration en direct de notre console."*
+> « VIGILO est un prototype de console de cyber-résilience destiné aux PME. Il rassemble cinq étapes : créer une simulation par email ou dans un parcours WhatsApp pédagogique, observer les clics et les signalements, obtenir une analyse, proposer un court module ciblé, puis comparer une campagne de re-test.
+> L’objectif est non punitif : transformer les erreurs en apprentissage et encourager le signalement. Le projet vise d’abord le contexte des PME togolaises et ouest-africaines, où les équipes ont besoin d’outils simples et abordables. »
 
----
+### 1:35–3:35 — Démonstration du prototype
 
-### 🖥️ MINUTE 2:30 - 5:00 | Démonstration Live (Guide d'Action Écran)
+**1. Choisir ou générer un scénario (≈ 35 s)**
 
-*(Lancer la démo sur l'écran)*
+Ouvrir le catalogue ou la génération de scénario. Montrer le public cible, le type de scénario et les signes d’alerte produits. Ne présenter le résultat comme généré par une API externe que si son fonctionnement a été vérifié avant le passage ; sinon, annoncer clairement que le scénario affiché vient du moteur de secours intégré.
 
-> **Étape A : La Landing Page et l'expérience Collaborateur (0:45 min)**
-> *"Voici la console VIGILO. Vous voyez ici notre landing page moderne et intuitive. En cliquant sur **'Tester en direct'**, nous ouvrons notre simulateur d'expérience collaborateur.*
-> *Regardez : le collaborateur reçoit cette alerte WhatsApp de la Direction. S'il clique sur le lien piégé, il n'est pas réprimandé. Il voit s'afficher une explication claire du piège et accède directement à sa formation de 2 minutes."*
+**2. Montrer l’expérience collaborateur (≈ 35 s)**
 
-> **Étape B : Le Coach IA Gemini 2.5 (0:45 min)**
-> *"Bascoulons sur l'onglet **Vigilo Coach IA**. L'administrateur PME n'a pas besoin d'être un expert cyber. Notre IA analyse la campagne, détecte que l'équipe Finance est particulièrement vulnérable aux fausses factures PDF, et génère en 5 secondes un nouveau scénario d'entraînement personnalisé."*
+Ouvrir le simulateur WhatsApp et montrer le message urgent, puis la bonne réaction : vérifier par un canal connu et signaler. Préciser : « C’est un simulateur dans l’application ; l’intégration WhatsApp Business et l’envoi réel de campagnes WhatsApp ne sont pas implémentés. »
 
-> **Étape C : Le Re-Test Tracking & Le ROI (0:45 min)**
-> *"Enfin, regardez l'onglet **Re-Test Tracking**. C'est ici que réside la valeur décisionnelle pour le dirigeant PME. Vous voyez en un coup d'œil l'évolution : **le taux de clic s'effondre de 34% à 8%**, tandis que le taux de signalement réflexe bondit à **88%**."*
+**3. Montrer la mesure et le Coach (≈ 35 s)**
 
----
+Revenir au tableau de bord ou à une campagne de démonstration. Montrer les indicateurs de clic et de signalement, puis ouvrir l’analyse du Coach. Dire : « Les chiffres préchargés dans cette démonstration sont des données de prototype ; ils ne représentent pas les résultats d’un pilote réel. »
 
-### 📊 MINUTE 5:00 - 6:30 | ROI, Modèle Économique & Différenciation
+**4. Montrer l’apprentissage et le re-test (≈ 15 s)**
 
-> *"Pourquoi VIGILO gagne face aux solutions existantes ?*
-> 
-> 1. **Face aux géants américains (KnowBe4, Proofpoint)** : Ils sont complexes, chers et pensés pour les grands groupes avec des équipes SOC dédiées. VIGILO est **100% automatisé, configuré en 2 minutes** pour les PME.
-> 2. **Le vecteur WhatsApp** : VIGILO est la première solution à simuler le **Whishing WhatsApp**, le vecteur d'attaque N°1 des PME en 2026.
-> 3. **Format Micro-Learning (2 min)** : Aucune perte de productivité pour l'entreprise.
-> 
-> **Business Model SaaS B2B** :
-> * Abonnement mensuel par collaborateur (ex: **3F CFA / utilisateur / mois**).
-> * Un ROI immédiat pour la PME : éviter une seule fraude au président de 10 000F CFA rentabilise la plateforme pour 5 ans."*
+Ouvrir un module interactif avec ses signes d’alerte et son quiz, puis la vue de comparaison du re-test. Présenter celle-ci comme le parcours fonctionnel du prototype, pas comme une amélioration déjà validée auprès d’utilisateurs.
 
----
+**Si la démo bloque :** passer à des captures d’écran préparées et poursuivre l’explication sans prétendre qu’une action a réussi.
 
-### 🛡️ MINUTE 6:30 - 8:00 | Conformité ANCy / RGPD & Conclusion
+### 3:35–4:55 — Pourquoi l’IA est centrale
 
-> *"Sur le plan réglementaire, VIGILO respecte strictement le **RGPD (Article 32)** : pas de stigmatisation individuelle, pseudonymisation des cohortes, et données hébergées en Europe.*
-> *De plus, VIGILO permet aux PME de se conformer directement aux **directives de l'ANCy** et aux exigences de la directive européenne **NIS 2**.*
-> 
-> **En conclusion :**
-> *Avec VIGILO, la cybersécurité ne repose plus seulement sur des logiciels coûteux. Elle transforme chaque employé en une sentinelle active.*
-> 
-> *Merci pour votre attention, nous sommes à votre disposition pour vos questions !"*
+> « L’IA intervient à trois moments précis : proposer des scénarios adaptés au public et au contexte saisis, analyser les résultats d’une campagne, puis générer une micro-formation sur la vulnérabilité identifiée. Elle aide une petite structure sans expert cyber à passer des indicateurs à une prochaine action concrète.
+> Techniquement, le frontend React/TypeScript appelle un backend Node/Express. Le serveur peut utiliser Gemini ou RodiumAI lorsque les clés et le service sont configurés ; les clés ne sont pas envoyées au navigateur. Des réponses de secours intégrées permettent aussi de faire fonctionner le parcours de démonstration lorsque l’IA externe est indisponible. »
 
----
+**À montrer si disponible :** le moteur utilisé (« Gemini », « RodiumAI » ou « vigilo-builtin ») et un exemple de scénario, d’analyse ou de formation généré. Distinguer une réponse réellement produite par un modèle d’une réponse de secours.
 
-## 🛡️ GUIDE DE DÉFENSE Q&A / OBJECTIONS DU JURY
+### 4:55–5:55 — Impact mesurable et éthique
 
-### ❓ Question 1 : *"Envoyer de faux messages WhatsApp du patron, est-ce que ça ne risque pas de créer un climat de suspicion ou de méfiance dans l'entreprise ?"*
-👉 **Réponse VIGILO** :
-> *"C'est une excellente question. C'est précisément pour cela que VIGILO repose sur une **charte d'apprentissage non punitive**. Lorsqu'un collaborateur tombe dans un piège, il n'y a aucun blâme ni rapport négatif envoyé aux RH. L'interface lui indique immédiatement 'Ceci était une simulation de sécurité bienveillante', lui explique en 30 secondes le détail du leurre et lui propose le micro-training. L'objectif est de créer une culture du signalement sans peur."*
+> « Nous ne revendiquons pas encore une baisse mesurée des incidents : nous sommes au stade prototype. Pour un pilote, nous établirons une mesure de départ, proposerons une formation ciblée, puis comparerons un scénario de re-test. Les indicateurs seront le taux de clic, le taux de signalement, la complétion du module et l’évolution entre les deux campagnes.
+> Nous voulons une démarche pédagogique, avec autorisation de l’entreprise, information claire des participants et résultats utilisés pour améliorer les pratiques, pas pour sanctionner des personnes. Les règles de conservation, d’accès et d’agrégation des données devront être définies avant tout déploiement réel. »
 
----
+### 5:55–6:55 — Faisabilité et limites actuelles
 
-### ❓ Question 2 : *"Comment vous différenciez-vous concrètement d'un acteur établi comme KnowBe4 ?"*
-👉 **Réponse VIGILO** :
-> *"KnowBe4 est une plateforme formidable pour les grands groupes du Fortune 500 ayant un RSSI à plein temps. Mais pour une PME de 50 personnes sans service informatique dédié :*
-> *1. KnowBe4 demande des semaines de paramétrage complexe.*
-> *2. Leurs modules de formation durent 30 à 45 minutes (trop long).*
-> *3. Ils ne gèrent pas nativement le canal WhatsApp Whishing.*
-> *VIGILO s'active en **3 clics**, utilise l'IA Gemini pour automatiser 100% de la création des leurres et propose des formats de **2 minutes**."*
+> « Le prototype comprend une console, un simulateur email/WhatsApp, des campagnes, un Coach IA, des modules interactifs et une vue de re-test. Le backend expose les routes de génération, d’analyse et de formation. Pour l’envoi, un endpoint email SMTP existe ; le moteur de démonstration est principalement alimenté par des données initiales et l’état de l’application.
+> Nous ne présentons donc pas encore un produit de production : les données métier ne sont pas persistées dans une base, l’authentification est une maquette, le parcours WhatsApp est simulé et l’efficacité n’a pas encore été validée par un pilote. Le prochain jalon est de tester le parcours avec des PME et d’améliorer le prototype à partir de leurs retours. »
 
----
+### 6:55–7:35 — Équipe et plan immédiat
 
-### ❓ Question 3 : *"Quelle est votre architecture technique sous le capot ?"*
-👉 **Réponse VIGILO** :
-> *"VIGILO s'appuie sur une architecture hybride très robuste :*
-> * *Notre moteur de simulation est interconnectable avec le framework Open Source **Gophish** pour la partie SMTP/Email et avec les API officielles **WhatsApp Business / Twilio**.*
-> * *Notre couche d'intelligence artificielle s'appuie sur **Google Gemini 2.5 Flash** pour l'analyse comportementale en temps réel et la génération dynamique de scénarios.*
-> * *Notre frontend React 19 / Vite offre un dashboard ultra-fluide avec une esthétique de classe mondiale."*
+> « Notre équipe réunit [nom et rôle], [nom et rôle] et [nom et rôle]. Nos compétences complémentaires couvrent [technique / cybersécurité / produit / terrain].
+> Après ce quart de finale, nos priorités sont de valider les besoins avec des PME, localiser les scénarios avec des exemples pertinents pour le Togo, fiabiliser la mesure et la protection des données, puis préparer un prototype plus robuste pour les demi-finales. »
 
----
+**Avant le pitch :** remplacer les crochets par les personnes, rôles et expériences réellement vérifiables. Vérifier aussi l’éligibilité universitaire de l’équipe et la disponibilité des justificatifs authentiques demandés pour les phases concernées.
 
-### ❓ Question 4 : *"Comment garantissez-vous la conformité RGPD ?"*
-👉 **Réponse VIGILO** :
-> *"Conformément à l'Article 32 du RGPD et aux recommandations de la CNIL, VIGILO ne stocke aucun contenu de communication personnelle. Les statistiques enregistrées sont agrégées par département ou cohorte. De plus, les employés sont préalablement informés que l'entreprise mène des exercices réguliers de prévention cyber."*
+### 7:35–8:00 — Conclusion
+
+> « VIGILO transforme une simulation autorisée en apprentissage mesurable : on repère un réflexe à renforcer, on forme, puis on re-teste. Nous voulons construire avec les PME du Togo un outil simple, responsable et adapté à leurs risques réels. AI4Youth nous aidera à valider cette approche et à faire évoluer le prototype. Merci. »
+
+## Préparation des 2 minutes de questions
+
+Répondre en une idée principale, puis un fait concret du prototype.
+
+**« Est-ce que l’IA fonctionne déjà ? »**
+
+« Le backend intègre les appels aux services Gemini et RodiumAI lorsqu’ils sont configurés. Le prototype a aussi un moteur de secours. Pendant la démo, je préciserai le moteur réellement utilisé pour chaque résultat. »
+
+**« WhatsApp est-il connecté ? »**
+
+« Non. Le parcours WhatsApp est une simulation pédagogique dans l’application. Une intégration WhatsApp Business contrôlée reste un travail futur. »
+
+**« Vos chiffres prouvent-ils une réduction du risque ? »**
+
+« Non, pas encore. Les chiffres visibles aujourd’hui servent à la démonstration. Nous mesurerons l’évolution lors d’un pilote, en comparant une campagne de départ et un re-test avec les mêmes indicateurs. »
+
+**« Qu’est-ce qui est déjà fonctionnel ? »**
+
+« Le prototype permet de parcourir la console, visualiser des campagnes, utiliser le simulateur, consulter une analyse et un module, et voir le principe du re-test. Les données d’exemple sont locales au prototype ; ce n’est pas encore une plateforme multi-client persistante. »
+
+**« Comment protégez-vous les employés et leurs données ? »**
+
+« La démarche prévue est autorisée, transparente et non punitive. Avant un pilote, nous préciserons les données collectées, qui y accède, combien de temps elles sont gardées et quelles vues agrégées sont présentées à l’entreprise. »
+
+**« Pourquoi ne pas simplement faire une formation annuelle ? »**
+
+« VIGILO propose une boucle courte et ciblée : simulation, retour pédagogique, module lié au comportement observé, puis re-test. Le pilote devra vérifier si cette approche améliore effectivement les indicateurs. »
+
+## Vérifications juste avant le passage
+
+- Confirmer l’horaire, la plateforme et le partage d’écran ; garder l’application et une capture de secours prêtes.
+- Tester le backend, l’accès réseau et les clés IA **sans afficher ni partager les secrets**.
+- Précharger la bonne vue et limiter la démo à deux minutes ; le jury note surtout l’impact, la place de l’IA et la faisabilité.
+- Ne pas présenter comme acquis : les statistiques de fraude non sourcées, un impact déjà mesuré, l’envoi WhatsApp réel, une base de données de production ou une authentification finalisée.
+- Préparer les noms/rôles de l’équipe et une réponse concise sur l’éligibilité universitaire.
+- Respecter la charte de conduite et attendre au moins 24 heures avant tout message de suivi.
