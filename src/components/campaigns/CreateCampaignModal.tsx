@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { X, Play } from 'lucide-react';
-import { Campaign, Scenario, DifficultyLevel, Employee } from '../../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import { X, Play, Users } from 'lucide-react';
+import { Campaign, Scenario, DifficultyLevel, Employee, CompanyDepartment, DepartmentStats } from '../../types';
 
 interface CreateCampaignModalProps {
   isOpen: boolean;
   onClose: () => void;
   scenarios: Scenario[];
   employees: Employee[];
+  departments?: CompanyDepartment[];
   onCreate: (campaignData: Partial<Campaign>) => void;
   preselectedScenarioId?: string;
   isReTestMode?: boolean;
@@ -18,6 +19,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   onClose,
   scenarios,
   employees,
+  departments = [],
   onCreate,
   preselectedScenarioId,
   isReTestMode,
@@ -38,43 +40,171 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
       : `Simulation contrôlée pour évaluer le réflexe de vérification des équipes.`
   );
   const [selectedScenarioId, setSelectedScenarioId] = useState(defaultScenario?.id || scenarios[0]?.id);
-  const [targetGroup, setTargetGroup] = useState(
-    baselineCampaign ? baselineCampaign.targetGroup : 'Tous les collaborateurs'
-  );
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(() => {
+    if (baselineCampaign?.targetEmployeeIds?.length) {
+      return new Set(baselineCampaign.targetEmployeeIds);
+    }
+    return new Set();
+  });
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<Set<string>>(() => {
+    if (baselineCampaign?.targetDepartmentIds?.length) {
+      return new Set(baselineCampaign.targetDepartmentIds);
+    }
+    return new Set();
+  });
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(defaultScenario?.difficulty || 'Moyen');
   const [adminValidated, setAdminValidated] = useState(false);
   const [sendRealEmails, setSendRealEmails] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
+  const orgDepartments = useMemo(() => {
+    if (departments.length > 0) return departments;
+    // Fallback: unique departments derived from employees
+    const map = new Map<string, CompanyDepartment>();
+    for (const emp of employees) {
+      const id = emp.departmentId || emp.department;
+      if (!id || map.has(id)) continue;
+      map.set(id, {
+        id,
+        adminId: '',
+        name: emp.department || id,
+        createdAt: '',
+      });
+    }
+    return Array.from(map.values());
+  }, [departments, employees]);
+
+  const employeesByDept = useMemo(() => {
+    const map = new Map<string, Employee[]>();
+    for (const emp of employees) {
+      const key = emp.departmentId || emp.department || '—';
+      const list = map.get(key) || [];
+      list.push(emp);
+      map.set(key, list);
+    }
+    return map;
+  }, [employees]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (baselineCampaign?.targetEmployeeIds?.length) {
+      setSelectedEmployeeIds(new Set(baselineCampaign.targetEmployeeIds));
+      setSelectedDepartmentIds(new Set(baselineCampaign.targetDepartmentIds || []));
+    } else {
+      setSelectedEmployeeIds(new Set());
+      setSelectedDepartmentIds(new Set());
+    }
+    setAdminValidated(false);
+    setSendRealEmails(false);
+  }, [isOpen, baselineCampaign?.id]);
+
   if (!isOpen || scenarios.length === 0) return null;
 
   const selectedScenario = scenarios.find((s) => s.id === selectedScenarioId) || scenarios[0];
+  const selectedCount = selectedEmployeeIds.size;
+
+  const deptSelectionState = (deptId: string): 'all' | 'some' | 'none' => {
+    const members = employeesByDept.get(deptId) || [];
+    if (members.length === 0) return selectedDepartmentIds.has(deptId) ? 'all' : 'none';
+    const selected = members.filter((e) => selectedEmployeeIds.has(e.id)).length;
+    if (selected === 0) return 'none';
+    if (selected === members.length) return 'all';
+    return 'some';
+  };
+
+  const toggleDepartment = (deptId: string) => {
+    const members = employeesByDept.get(deptId) || [];
+    const state = deptSelectionState(deptId);
+    setSelectedEmployeeIds((prev) => {
+      const next = new Set(prev);
+      if (state === 'all') {
+        members.forEach((e) => next.delete(e.id));
+      } else {
+        members.forEach((e) => next.add(e.id));
+      }
+      return next;
+    });
+    setSelectedDepartmentIds((prev) => {
+      const next = new Set(prev);
+      if (state === 'all') next.delete(deptId);
+      else next.add(deptId);
+      return next;
+    });
+  };
+
+  const toggleEmployee = (emp: Employee) => {
+    const deptKey = emp.departmentId || emp.department || '—';
+    setSelectedEmployeeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(emp.id)) next.delete(emp.id);
+      else next.add(emp.id);
+      return next;
+    });
+    setSelectedDepartmentIds((prev) => {
+      const next = new Set(prev);
+      const members = employeesByDept.get(deptKey) || [];
+      // Keep dept marked if at least one member remains / will remain selected after toggle
+      const willBeSelected = !selectedEmployeeIds.has(emp.id);
+      const othersSelected = members.some((m) => m.id !== emp.id && selectedEmployeeIds.has(m.id));
+      if (willBeSelected || othersSelected) next.add(deptKey);
+      else next.delete(deptKey);
+      return next;
+    });
+  };
+
+  const selectAllEmployees = () => {
+    setSelectedEmployeeIds(new Set(employees.map((e) => e.id)));
+    setSelectedDepartmentIds(new Set(orgDepartments.map((d) => d.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedEmployeeIds(new Set());
+    setSelectedDepartmentIds(new Set());
+  };
+
+  const buildTargetGroupLabel = (selected: Employee[]): string => {
+    if (selected.length === 0) return 'Aucune cible';
+    if (selected.length === employees.length && employees.length > 0) {
+      return `Tous les collaborateurs (${selected.length})`;
+    }
+    const deptNames = Array.from(
+      new Set(
+        selectedDepartmentIds.size > 0
+          ? orgDepartments.filter((d) => selectedDepartmentIds.has(d.id)).map((d) => d.name)
+          : selected.map((e) => e.department)
+      )
+    );
+    if (deptNames.length > 0 && deptNames.length <= 3) {
+      return `${deptNames.join(', ')} (${selected.length})`;
+    }
+    return `Sélection personnalisée (${selected.length})`;
+  };
+
+  const buildDepartmentStats = (selected: Employee[]): DepartmentStats[] => {
+    const counts = new Map<string, number>();
+    for (const emp of selected) {
+      const name = emp.department || '—';
+      counts.set(name, (counts.get(name) || 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([name, targeted]) => ({
+      name,
+      targeted,
+      opened: 0,
+      clicked: 0,
+      reported: 0,
+      clickRate: 0,
+      reportRate: 0,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminValidated) return;
+    if (!adminValidated || selectedCount === 0) return;
 
-    const cohortSizes: Record<string, number> = {
-      'Tous les collaborateurs': 32,
-      'Direction & Finance': 12,
-      'Équipe Commerciale': 10,
-      'Ressources Humaines': 6,
-      'Technique & R&D': 14,
-    };
-    const targetedCount = cohortSizes[targetGroup] || 25;
-
-    const departments =
-      targetGroup === 'Direction & Finance'
-        ? [
-            { name: 'Direction Générale', targeted: 4, opened: 0, clicked: 0, reported: 0, clickRate: 0, reportRate: 0 },
-            { name: 'Comptabilité & Trésorerie', targeted: 8, opened: 0, clicked: 0, reported: 0, clickRate: 0, reportRate: 0 },
-          ]
-        : [
-            { name: 'Direction & Finance', targeted: Math.round(targetedCount * 0.2), opened: 0, clicked: 0, reported: 0, clickRate: 0, reportRate: 0 },
-            { name: 'Équipe Commerciale', targeted: Math.round(targetedCount * 0.3), opened: 0, clicked: 0, reported: 0, clickRate: 0, reportRate: 0 },
-            { name: 'Ressources Humaines', targeted: Math.round(targetedCount * 0.15), opened: 0, clicked: 0, reported: 0, clickRate: 0, reportRate: 0 },
-            { name: 'Technique & Dev', targeted: Math.round(targetedCount * 0.35), opened: 0, clicked: 0, reported: 0, clickRate: 0, reportRate: 0 },
-          ];
+    const selectedEmployees = employees.filter((emp) => selectedEmployeeIds.has(emp.id));
+    const targetedCount = selectedEmployees.length;
+    const departmentsStats = buildDepartmentStats(selectedEmployees);
+    const targetGroup = buildTargetGroupLabel(selectedEmployees);
 
     const newCampaign: Partial<Campaign> = {
       id: `camp-${Date.now()}`,
@@ -85,6 +215,8 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
       category: selectedScenario.category,
       difficulty,
       targetGroup,
+      targetEmployeeIds: selectedEmployees.map((e) => e.id),
+      targetDepartmentIds: Array.from(selectedDepartmentIds),
       status: 'en_cours',
       createdAt: new Date().toISOString(),
       launchedAt: new Date().toISOString(),
@@ -96,21 +228,17 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
       clickRate: isReTestMode ? 8.0 : 25.0,
       reportRate: isReTestMode ? 75.0 : 45.0,
       medianReactionTimeMinutes: isReTestMode ? 7 : 18,
-      departments,
+      departments: departmentsStats,
       isReTest: isReTestMode,
       baselineCampaignId: baselineCampaign?.id,
     };
 
-    if (sendRealEmails && employees.length > 0) {
+    if (sendRealEmails && selectedEmployees.length > 0) {
       setIsSending(true);
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const targetedEmployees = targetGroup.startsWith('Tous')
-        ? employees
-        : employees.filter((emp) => targetGroup.includes(emp.department));
-
       try {
         await Promise.all(
-          targetedEmployees.map((emp) =>
+          selectedEmployees.map((emp) =>
             fetch('/api/send-live-test', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -212,40 +340,128 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <label className="text-xs font-semibold text-[var(--foreground)]">Population cible</label>
-                <select
-                  value={targetGroup}
-                  onChange={(e) => setTargetGroup(e.target.value)}
-                  className="vigilo-input w-full px-3 py-2.5 rounded-lg text-sm cursor-pointer"
-                >
-                  <option value="Tous les collaborateurs">Tous les collaborateurs (32)</option>
-                  <option value="Direction & Finance">Direction & Finance (12)</option>
-                  <option value="Équipe Commerciale">Équipe Commerciale (10)</option>
-                  <option value="Ressources Humaines">Ressources Humaines (6)</option>
-                  <option value="Technique & R&D">Technique & R&D (14)</option>
-                </select>
+                <span className="text-xs font-mono text-[var(--muted-foreground)] flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" />
+                  {selectedCount} sélectionné(s)
+                </span>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[var(--foreground)]">Difficulté</label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(['Facile', 'Moyen', 'Difficile'] as DifficultyLevel[]).map((lvl) => (
+              {employees.length === 0 ? (
+                <p className="text-xs text-[var(--muted-foreground)] p-3 rounded-lg border border-[var(--card-border)] bg-[var(--surface-inset)]">
+                  Aucun collaborateur dans l&apos;annuaire. Ajoutez des services et employés dans Annuaire.
+                </p>
+              ) : (
+                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--surface-inset)] overflow-hidden">
+                  <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[var(--card-border)] bg-[var(--muted)]">
                     <button
-                      key={lvl}
                       type="button"
-                      onClick={() => setDifficulty(lvl)}
-                      className={`py-2 rounded-lg font-medium text-xs border transition-all cursor-pointer ${
-                        difficulty === lvl
-                          ? 'border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--primary)] font-semibold'
-                          : 'border-[var(--card-border)] bg-[var(--surface-inset)] text-[var(--muted-foreground)]'
-                      }`}
+                      onClick={selectAllEmployees}
+                      className="vigilo-btn-secondary px-2.5 py-1 rounded-md text-[11px] cursor-pointer"
                     >
-                      {lvl}
+                      Tout sélectionner ({employees.length})
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      className="vigilo-btn-secondary px-2.5 py-1 rounded-md text-[11px] cursor-pointer"
+                    >
+                      Effacer
+                    </button>
+                  </div>
+
+                  {orgDepartments.length > 0 && (
+                    <div className="px-3 py-2 border-b border-[var(--card-border)] space-y-1.5">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                        Services
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {orgDepartments.map((dept) => {
+                          const members = employeesByDept.get(dept.id) || [];
+                          const state = deptSelectionState(dept.id);
+                          return (
+                            <label
+                              key={dept.id}
+                              className="flex items-center gap-2.5 py-1 cursor-pointer hover:bg-[var(--muted)]/60 rounded px-1"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={state === 'all'}
+                                ref={(el) => {
+                                  if (el) el.indeterminate = state === 'some';
+                                }}
+                                onChange={() => toggleDepartment(dept.id)}
+                                className="rounded accent-[var(--primary)]"
+                              />
+                              <span className="text-xs font-medium text-[var(--foreground)] flex-1">
+                                {dept.name}
+                              </span>
+                              <span className="text-[10px] font-mono text-[var(--muted-foreground)]">
+                                {members.filter((m) => selectedEmployeeIds.has(m.id)).length}/{members.length}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="max-h-48 overflow-y-auto">
+                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)] sticky top-0 bg-[var(--surface-inset)] border-b border-[var(--card-border)]">
+                      Collaborateurs
+                    </div>
+                    <ul className="divide-y divide-[var(--card-border)]">
+                      {employees.map((emp) => {
+                        const checked = selectedEmployeeIds.has(emp.id);
+                        return (
+                          <li key={emp.id}>
+                            <label className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-[var(--muted)] transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleEmployee(emp)}
+                                className="rounded accent-[var(--primary)]"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold text-[var(--foreground)]">
+                                  {emp.firstName} {emp.lastName}
+                                </div>
+                                <div className="text-[10px] text-[var(--muted-foreground)] font-mono truncate">
+                                  {emp.email}
+                                </div>
+                              </div>
+                              <span className="text-[10px] text-[var(--muted-foreground)] shrink-0">
+                                {emp.department}
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[var(--foreground)]">Difficulté</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(['Facile', 'Moyen', 'Difficile'] as DifficultyLevel[]).map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => setDifficulty(lvl)}
+                    className={`py-2 rounded-lg font-medium text-xs border transition-all cursor-pointer ${
+                      difficulty === lvl
+                        ? 'border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--primary)] font-semibold'
+                        : 'border-[var(--card-border)] bg-[var(--surface-inset)] text-[var(--muted-foreground)]'
+                    }`}
+                  >
+                    {lvl}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -269,7 +485,9 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                   className="mt-1 rounded accent-[var(--primary)]"
                 />
                 <span className="text-[var(--foreground)] text-xs leading-relaxed">
-                  <strong className="text-[var(--primary)]">Emails réels :</strong> envoyer aux collaborateurs de l&apos;annuaire (SMTP requis).
+                  <strong className="text-[var(--primary)]">Emails réels :</strong> envoyer aux{' '}
+                  {selectedCount > 0 ? `${selectedCount} collaborateur(s) sélectionné(s)` : 'collaborateurs sélectionnés'}{' '}
+                  (SMTP requis).
                 </span>
               </label>
             </div>
@@ -285,11 +503,15 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!adminValidated || isSending}
+              disabled={!adminValidated || isSending || selectedCount === 0}
               className="vigilo-btn-orange w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-40 cursor-pointer"
             >
               <Play className="w-4 h-4" />
-              {isSending ? 'Envoi…' : isReTestMode ? 'Démarrer le Re-test' : 'Lancer la simulation'}
+              {isSending
+                ? 'Envoi…'
+                : isReTestMode
+                  ? `Démarrer le Re-test (${selectedCount})`
+                  : `Lancer la simulation (${selectedCount})`}
             </button>
           </div>
         </form>
