@@ -17,9 +17,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   settings,
   onUpdateSettings,
 }) => {
-  const [provider, setProvider] = useState<'mock' | 'gophish'>(settings.provider);
-  const [gophishUrl, setGophishUrl] = useState(settings.gophishUrl);
-  const [gophishApiKey, setGophishApiKey] = useState(settings.gophishApiKey);
+  const [provider, setProvider] = useState<'mock' | 'gophish'>('mock');
   const [companyName, setCompanyName] = useState(settings.companyName);
   const [companyDomain, setCompanyDomain] = useState(settings.companyDomain);
   const [savedNotification, setSavedNotification] = useState(false);
@@ -29,8 +27,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onUpdateSettings({
       ...settings,
       provider,
-      gophishUrl,
-      gophishApiKey,
+      gophishUrl: '',
+      gophishApiKey: '',
       companyName,
       companyDomain,
     });
@@ -60,13 +58,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               Moteur de simulation
             </h3>
             <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800 w-fit">
-              Opérationnel
+              Démo locale
             </span>
           </div>
 
           <p className="text-[var(--muted-foreground)] text-sm leading-relaxed">
-            <strong className="text-[var(--foreground)]">Mock</strong> : démo et parcours collaborateur sans serveur externe.{' '}
-            <strong className="text-[var(--foreground)]">Gophish</strong> : envoi réel via votre instance autorisée.
+            <strong className="text-[var(--foreground)]">Mock</strong> : démo locale sans envoi externe.{' '}
+            Gophish n&apos;est pas connecté dans cette version.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -90,46 +88,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <button
               type="button"
-              onClick={() => setProvider('gophish')}
-              className={`p-4 rounded-xl border text-left transition-all space-y-2 cursor-pointer ${
-                provider === 'gophish'
-                  ? 'border-[var(--primary)] bg-[var(--primary)]/10 ring-1 ring-[var(--primary)]/30'
-                  : 'border-[var(--card-border)] bg-[var(--surface-inset)] hover:border-[var(--primary)]/40'
-              }`}
+              disabled
+              aria-disabled="true"
+              className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--surface-inset)] text-left space-y-2 opacity-50 cursor-not-allowed"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-[var(--foreground)]">Gophish API</span>
-                {provider === 'gophish' && <CheckCircle2 className="w-4 h-4 text-[var(--primary)] shrink-0" />}
+                <span className="font-bold text-[var(--foreground)]">Gophish API (roadmap)</span>
               </div>
               <p className="text-[var(--muted-foreground)] text-xs leading-relaxed">
-                Connexion à un serveur Gophish d&apos;entreprise (contexte autorisé).
+                Aucun serveur ni connecteur Gophish n&apos;est configuré.
               </p>
             </button>
           </div>
-
-          {provider === 'gophish' && (
-            <div className="p-4 rounded-lg vigilo-inset space-y-3 animate-in fade-in">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[var(--foreground)]">URL du serveur Gophish</label>
-                <input
-                  type="url"
-                  value={gophishUrl}
-                  onChange={(e) => setGophishUrl(e.target.value)}
-                  className="vigilo-input w-full px-3 py-2 rounded-lg text-sm"
-                  placeholder="https://gophish.votre-entreprise.tg"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[var(--foreground)]">Clé API (Admin Token)</label>
-                <input
-                  type="password"
-                  value={gophishApiKey}
-                  onChange={(e) => setGophishApiKey(e.target.value)}
-                  className="vigilo-input w-full px-3 py-2 rounded-lg text-sm font-mono"
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         <div className={cardClass}>

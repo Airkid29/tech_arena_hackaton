@@ -146,7 +146,7 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
                 <Zap className="w-4 h-4" />
                 <span>Diagnostic & Synthèse par RodiumAI :</span>
               </div>
-              <p>{selectedCampaign.aiAnalysis.summary}</p>
+              <p>{selectedCampaign.aiAnalysis.executiveSummary}</p>
             </div>
 
             {/* Diagnostic Details Grid */}
@@ -158,7 +158,7 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
                   <span>Leviers Psychologiques Déclenchés</span>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
-                  {(selectedCampaign.aiAnalysis.keyVulnerabilities || []).map((v: string, i: number) => (
+                  {[selectedCampaign.aiAnalysis.vulnerabilityFactor].map((v, i) => (
                     <span key={i} className="px-3 py-1 rounded-full text-xs font-mono bg-rose-500/15 text-rose-300 border border-rose-500/30">
                       {v}
                     </span>
@@ -173,9 +173,9 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
                   <span>Cohortes à Risque Élevé</span>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
-                  {(selectedCampaign.aiAnalysis.vulnerableCohorts || []).map((c: string, i: number) => (
+                  {selectedCampaign.aiAnalysis.departmentVulnerabilities.map(({ department }, i) => (
                     <span key={i} className="px-3 py-1 rounded-full text-xs font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                      {c}
+                      {department}
                     </span>
                   ))}
                 </div>
@@ -183,7 +183,7 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
             </div>
 
             {/* Recommended Training */}
-            {selectedCampaign.aiAnalysis.recommendedTraining && (
+            {selectedCampaign.aiAnalysis.trainingAdvice && (
               <div className="p-6 rounded-xl bg-[var(--card)] border border-[var(--card-border)] space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-emerald-400 text-xs uppercase tracking-wider">
@@ -195,8 +195,8 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-900 border border-white/10">
                   <div>
-                    <h4 className="font-bold text-white text-sm">{selectedCampaign.aiAnalysis.recommendedTraining.title}</h4>
-                    <p className="text-xs text-slate-400 mt-1">{selectedCampaign.aiAnalysis.recommendedTraining.reasoning}</p>
+                    <h4 className="font-bold text-white text-sm">Micro-formation recommandée</h4>
+                    <p className="text-xs text-slate-400 mt-1">{selectedCampaign.aiAnalysis.trainingAdvice}</p>
                   </div>
 
                   <button

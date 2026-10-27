@@ -40,7 +40,8 @@ export function clearSessionCookie(res: Response): void {
   res.clearCookie(COOKIE_NAME, { path: '/' });
 }
 
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  let subject: string;
   try {
     const header = req.headers.authorization;
     const bearer = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
@@ -50,15 +51,23 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
       return;
     }
     const payload = jwt.verify(token, getSessionSecret()) as { sub: string };
-    const admin = findAdminById(payload.sub);
+    subject = payload.sub;
+  } catch {
+    res.status(401).json({ success: false, error: 'Session expirée ou invalide' });
+    return;
+  }
+
+  try {
+    const admin = await findAdminById(subject);
     if (!admin) {
       res.status(401).json({ success: false, error: 'Session invalide' });
       return;
     }
     req.admin = admin;
     next();
-  } catch {
-    res.status(401).json({ success: false, error: 'Session expirée ou invalide' });
+  } catch (error) {
+    console.error('[Auth] Impossible de vérifier la session auprès de Supabase:', error);
+    res.status(503).json({ success: false, error: 'Service de données temporairement indisponible' });
   }
 }
 

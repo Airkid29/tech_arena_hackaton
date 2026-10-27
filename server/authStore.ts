@@ -1,25 +1,6 @@
-/**
- * Admin auth store (data/admins.json).
- *
- * Naming clarification (FR product language):
- * - `services: VigiloService[]` = modules de simulation / scénarios phishing
- *   choisis à l'inscription (Phishing, Fake Invoice, WhatsApp…).
- *   Ce NE sont PAS les services/départements de l'entreprise (RH, Comptabilité…).
- * - Les départements entreprise + collaborateurs vivent dans orgStore (data/org.json).
- *
- * Migration: existing admins.json entries with services=[...] remain valid —
- * no schema change; company departments start empty and are created via /api/org/*.
- */
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DATA_DIR = path.resolve(__dirname, '..', 'data');
-const STORE_PATH = path.join(DATA_DIR, 'admins.json');
+import { getDatabase, unwrapDatabaseResult } from './database';
 
 export type CompanySize = '1-10' | '11-50' | '51-100' | '101-150' | '150+';
 export type VigiloService =
@@ -40,32 +21,51 @@ export interface AdminPublic {
   createdAt: string;
 }
 
-export interface AdminRecord extends AdminPublic {
+interface AdminRecord extends AdminPublic {
   passwordHash: string;
 }
 
-interface StoreFile {
-  admins: AdminRecord[];
+interface AdminRow {
+  id: string;
+  email: string;
+  password_hash: string;
+  company_name: string;
+  company_size: CompanySize;
+  services: VigiloService[];
+  created_at: string;
 }
 
-function ensureStore(): StoreFile {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(STORE_PATH)) {
-    const empty: StoreFile = { admins: [] };
-    fs.writeFileSync(STORE_PATH, JSON.stringify(empty, null, 2), 'utf8');
-    return empty;
-  }
-  return JSON.parse(fs.readFileSync(STORE_PATH, 'utf8')) as StoreFile;
-}
+const ADMIN_FIELDS = 'id,email,password_hash,company_name,company_size,services,created_at';
+const ALLOWED_SIZES: CompanySize[] = ['1-10', '11-50', '51-100', '101-150', '150+'];
+const ALLOWED_SERVICES: VigiloService[] = [
+  'Phishing',
+  'Fake Invoice',
+  'WhatsApp Phishing',
+  'Smishing',
+  'MFA Fatigue',
+  'Social Engineering',
+  'QR Code (Quishing)',
+];
 
-function saveStore(store: StoreFile): void {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), 'utf8');
+function toRecord(row: AdminRow): AdminRecord {
+  return {
+    id: row.id,
+    email: row.email,
+    passwordHash: row.password_hash,
+    companyName: row.company_name,
+    companySize: row.company_size,
+    services: row.services,
+    createdAt: row.created_at,
+  };
 }
 
 export function toPublic(admin: AdminRecord): AdminPublic {
-  const { passwordHash: _, ...pub } = admin;
-  return pub;
+  const { passwordHash: _passwordHash, ...publicAdmin } = admin;
+  return publicAdmin;
+}
+
+function httpError(message: string, status: number): Error {
+  return Object.assign(new Error(message), { status });
 }
 
 export async function registerAdmin(input: {
@@ -75,51 +75,73 @@ export async function registerAdmin(input: {
   companySize: CompanySize;
   services: VigiloService[];
 }): Promise<AdminPublic> {
+  if (typeof input.email !== 'string' || typeof input.password !== 'string') {
+    throw httpError('Email et mot de passe invalides', 400);
+  }
+  if (typeof input.companyName !== 'string') {
+    throw httpError("Nom d'entreprise invalide", 400);
+  }
+  if (!Array.isArray(input.services)) {
+    throw httpError('Liste de modules invalide', 400);
+  }
   const email = input.email.trim().toLowerCase();
-  if (!email || !input.password || input.password.length < 8) {
-    throw Object.assign(new Error('Email et mot de passe (min. 8) requis'), { status: 400 });
+  const companyName = input.companyName.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || input.password.length < 8) {
+    throw httpError('Email valide et mot de passe de 8 caractères minimum requis', 400);
   }
-  if (!input.companyName?.trim()) {
-    throw Object.assign(new Error("Nom d'entreprise requis"), { status: 400 });
+  if (!companyName) throw httpError("Nom d'entreprise requis", 400);
+  if (!ALLOWED_SIZES.includes(input.companySize)) {
+    throw httpError("Taille d'entreprise invalide", 400);
   }
-  if (!input.services?.length) {
-    throw Object.assign(new Error('Sélectionnez au moins un module de simulation (phishing)'), { status: 400 });
-  }
-  const allowedSizes: CompanySize[] = ['1-10', '11-50', '51-100', '101-150', '150+'];
-  if (!allowedSizes.includes(input.companySize)) {
-    throw Object.assign(new Error('Taille d\'entreprise invalide'), { status: 400 });
-  }
-
-  const store = ensureStore();
-  if (store.admins.some((a) => a.email === email)) {
-    throw Object.assign(new Error('Un compte existe déjà avec cet email'), { status: 409 });
+  if (!input.services.length || input.services.some((service) => !ALLOWED_SERVICES.includes(service))) {
+    throw httpError('Sélectionnez au moins un module valide', 400);
   }
 
   const passwordHash = await bcrypt.hash(input.password, 12);
-  const record: AdminRecord = {
-    id: randomUUID(),
-    email,
-    passwordHash,
-    companyName: input.companyName.trim(),
-    companySize: input.companySize,
-    services: input.services,
-    createdAt: new Date().toISOString(),
-  };
-  store.admins.push(record);
-  saveStore(store);
-  return toPublic(record);
+  const result = await getDatabase()
+    .from('admins')
+    .insert({
+      id: randomUUID(),
+      email,
+      password_hash: passwordHash,
+      company_name: companyName,
+      company_size: input.companySize,
+      services: input.services,
+    })
+    .select(ADMIN_FIELDS)
+    .single();
+
+  if (result.error?.code === '23505') {
+    throw httpError('Un compte existe déjà avec cet email', 409);
+  }
+  const row = unwrapDatabaseResult('création du compte', result) as AdminRow;
+  return toPublic(toRecord(row));
 }
 
-export async function verifyLogin(email: string, password: string): Promise<AdminPublic | null> {
-  const store = ensureStore();
-  const admin = store.admins.find((a) => a.email === email.trim().toLowerCase());
-  if (!admin) return null;
-  const ok = await bcrypt.compare(password, admin.passwordHash);
-  return ok ? toPublic(admin) : null;
+export async function verifyLogin(emailInput: string, password: string): Promise<AdminPublic | null> {
+  if (typeof emailInput !== 'string' || typeof password !== 'string') {
+    throw httpError('Email et mot de passe invalides', 400);
+  }
+  const email = emailInput.trim().toLowerCase();
+  const result = await getDatabase()
+    .from('admins')
+    .select(ADMIN_FIELDS)
+    .eq('email', email)
+    .maybeSingle();
+  const row = unwrapDatabaseResult('recherche du compte', result) as AdminRow | null;
+  if (!row) return null;
+
+  const admin = toRecord(row);
+  const valid = await bcrypt.compare(password, admin.passwordHash);
+  return valid ? toPublic(admin) : null;
 }
 
-export function findAdminById(id: string): AdminPublic | null {
-  const store = ensureStore();
-  const admin = store.admins.find((a) => a.id === id);
-  return admin ? toPublic(admin) : null;
+export async function findAdminById(id: string): Promise<AdminPublic | null> {
+  const result = await getDatabase()
+    .from('admins')
+    .select(ADMIN_FIELDS)
+    .eq('id', id)
+    .maybeSingle();
+  const row = unwrapDatabaseResult('lecture du compte', result) as AdminRow | null;
+  return row ? toPublic(toRecord(row)) : null;
 }

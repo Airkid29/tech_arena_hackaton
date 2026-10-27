@@ -43,8 +43,21 @@ import {
 } from './types';
 import { Language } from './i18n/translations';
 
+type PublicTrainingState =
+  | { status: 'loading' }
+  | { status: 'ready'; token: string; module: TrainingModule; completed: boolean }
+  | { status: 'error'; message: string };
+
 export default function App() {
-  const [viewMode, setViewMode] = useState<AppViewMode>('landing');
+  const hasTrainingInvitation =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('trainingInvite');
+  const [viewMode, setViewMode] = useState<AppViewMode>(
+    hasTrainingInvitation ? 'training-invite' : 'landing'
+  );
+  const [publicTraining, setPublicTraining] = useState<PublicTrainingState | null>(
+    hasTrainingInvitation ? { status: 'loading' } : null
+  );
   const [admin, setAdmin] = useState<AdminPublic | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -82,12 +95,13 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+    const hasInvitation = new URLSearchParams(window.location.search).has('trainingInvite');
     (async () => {
       try {
         const me = await vigiloAuthService.me();
         if (!cancelled) {
           setAdmin(me);
-          if (me) setViewMode('app');
+          if (me && !hasInvitation) setViewMode('app');
         }
       } catch {
         // réseau / JSON : rester déconnecté
@@ -95,6 +109,31 @@ export default function App() {
         if (!cancelled) setAuthChecking(false);
       }
     })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('trainingInvite');
+    if (!token) return;
+
+    let cancelled = false;
+    setViewMode('training-invite');
+    setPublicTraining({ status: 'loading' });
+    window.history.replaceState({}, document.title, window.location.pathname);
+    void vigiloTrainingService.getTrainingInvitation(token).then(
+      ({ module, completed }) => {
+        if (!cancelled) setPublicTraining({ status: 'ready', token, module, completed });
+      },
+      (error: unknown) => {
+        if (!cancelled) {
+          setPublicTraining({
+            status: 'error',
+            message: error instanceof Error ? error.message : 'Impossible de charger cette formation.',
+          });
+        }
+      }
+    );
     return () => { cancelled = true; };
   }, []);
 
@@ -409,12 +448,15 @@ export default function App() {
 
     for (const emp of targets) {
       if (channel === 'Email') {
-        await vigiloTrainingService.sendTrainingInvite({
+        const sent = await vigiloTrainingService.sendTrainingInvite({
           email: emp.email,
           firstName: emp.firstName,
           module: mod,
           origin,
         });
+        if (!sent) throw new Error(`L’invitation de formation n’a pas été envoyée à ${emp.email}`);
+      } else {
+        throw new Error('L’envoi de formation par WhatsApp n’est pas encore connecté.');
       }
     }
 
@@ -475,11 +517,56 @@ export default function App() {
   const activeCampaignCount = campaigns.filter((c) => c.status === 'en_cours').length;
   const isDark = theme === 'dark';
 
-  if (authChecking) {
+  if (authChecking && viewMode !== 'training-invite') {
     return (
       <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
         <div className="min-h-screen flex items-center justify-center bg-[var(--background)] text-[var(--muted-foreground)] text-sm">
           Vérification de session…
+        </div>
+      </div>
+    );
+  }
+
+  if (viewMode === 'training-invite') {
+    const leaveTraining = () => {
+      setPublicTraining(null);
+      setViewMode('landing');
+    };
+
+    return (
+      <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)] text-[var(--foreground)] p-4">
+          {publicTraining?.status === 'loading' && (
+            <p className="text-sm text-[var(--muted-foreground)]">Chargement de la micro-formation…</p>
+          )}
+          {publicTraining?.status === 'error' && (
+            <div className="max-w-md space-y-4 text-center">
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400">{publicTraining.message}</p>
+              <button type="button" onClick={leaveTraining} className="vigilo-btn-secondary px-4 py-2 rounded-lg text-sm">
+                Retour à VIGILO
+              </button>
+            </div>
+          )}
+          {publicTraining?.status === 'ready' && publicTraining.completed && (
+            <div className="max-w-md space-y-4 text-center">
+              <h1 className="text-lg font-bold">Formation déjà complétée</h1>
+              <p className="text-sm text-[var(--muted-foreground)]">{publicTraining.module.title}</p>
+              <button type="button" onClick={leaveTraining} className="vigilo-btn-secondary px-4 py-2 rounded-lg text-sm">
+                Retour à VIGILO
+              </button>
+            </div>
+          )}
+          {publicTraining?.status === 'ready' && !publicTraining.completed && (
+            <InteractiveTrainingPlayer
+              module={publicTraining.module}
+              onClose={leaveTraining}
+              onComplete={() => vigiloTrainingService.completeTrainingInvitation(publicTraining.token)}
+              onNavigateToReTest={() => {
+                setPublicTraining(null);
+                setViewMode('login');
+              }}
+            />
+          )}
         </div>
       </div>
     );

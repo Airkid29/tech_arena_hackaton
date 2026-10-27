@@ -14,7 +14,7 @@ import { TrainingModule } from '../../types';
 interface InteractiveTrainingPlayerProps {
   module: TrainingModule;
   onClose: () => void;
-  onComplete: (moduleId: string) => void;
+  onComplete: (moduleId: string) => void | Promise<void>;
   onNavigateToReTest: () => void;
 }
 
@@ -27,6 +27,8 @@ export const InteractiveTrainingPlayer: React.FC<InteractiveTrainingPlayerProps>
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
   const [isAnswerSubmitted, setIsAnswerSubmitted] = useState<boolean>(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
 
   const stepsMeta = [
     { title: '1. Situation', subtitle: 'Contexte' },
@@ -35,12 +37,20 @@ export const InteractiveTrainingPlayer: React.FC<InteractiveTrainingPlayerProps>
     { title: '4. Quiz', subtitle: 'Validation' },
   ];
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else if (currentStep === 3 && isAnswerSubmitted) {
-      onComplete(module.id);
-      setCurrentStep(4);
+      setIsCompleting(true);
+      setCompletionError(null);
+      try {
+        await onComplete(module.id);
+        setCurrentStep(4);
+      } catch (error) {
+        setCompletionError(error instanceof Error ? error.message : 'La fin de formation n’a pas pu être enregistrée.');
+      } finally {
+        setIsCompleting(false);
+      }
     }
   };
 
@@ -322,14 +332,19 @@ export const InteractiveTrainingPlayer: React.FC<InteractiveTrainingPlayerProps>
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={currentStep === 3 && !isAnswerSubmitted}
+                disabled={isCompleting || (currentStep === 3 && !isAnswerSubmitted)}
                 className="vigilo-btn-orange flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-40 cursor-pointer"
               >
-                <span>{currentStep === 3 ? 'Terminer' : 'Suivant'}</span>
+                <span>{isCompleting ? 'Enregistrement…' : currentStep === 3 ? 'Terminer' : 'Suivant'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
+        )}
+        {completionError && (
+          <p role="alert" className="px-4 pb-3 text-xs text-red-600 dark:text-red-400">
+            {completionError}
+          </p>
         )}
       </div>
     </div>

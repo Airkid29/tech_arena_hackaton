@@ -30,47 +30,12 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>(scenarios[0]?.id || '');
 
-  const [testEmail, setTestEmail] = useState('');
-  const [isSendingTest, setIsSendingTest] = useState(false);
-  const [testSuccess, setTestSuccess] = useState<string | null>(null);
-
-  const handleSendTestEmail = async () => {
-    if (!testEmail || !activeScenario) return;
-    setIsSendingTest(true);
-    setTestSuccess(null);
-    try {
-      const origin = window.location.origin;
-      const res = await fetch('/api/send-live-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: testEmail, scenario: activeScenario, origin })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTestSuccess("✅ Email envoyé avec succès ! Consultez votre boîte de réception pour tester le workflow.");
-        setTestEmail('');
-      } else {
-        alert("Erreur lors de l'envoi : " + data.error);
-      }
-    } catch (err: any) {
-      console.error(err);
-      alert("Erreur réseau ou le serveur n'est pas à jour. Avez-vous redémarré 'npm run dev' ?");
-    } finally {
-      setIsSendingTest(false);
-    }
-  };
-
   const filteredScenarios = scenarios.filter((s) =>
     selectedCategory === 'all' ? true : s.category === selectedCategory
   );
 
   const activeScenario =
     scenarios.find((s) => s.id === selectedScenarioId) || filteredScenarios[0] || scenarios[0];
-
-  // Effacer le message de succès si on change de scénario
-  React.useEffect(() => {
-    setTestSuccess(null);
-  }, [activeScenario]);
 
   const categories = [
     { id: 'all', label: 'Tous les scénarios' },
@@ -88,10 +53,10 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
         <div>
           <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
             <FileCode2 className="w-5 h-5 text-[#fb923c]" />
-            <span>Catalogue des scénarios d'attaque contrôlée</span>
+            <span>Catalogue des scénarios pédagogiques</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Modèles de simulation testés conformes au cadre légal de sensibilisation des collaborateurs (Email & WhatsApp).
+            Exemples locaux pour la démonstration. Aucun email ou message WhatsApp n&apos;est envoyé.
           </p>
         </div>
 
@@ -100,7 +65,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
           className="vigilo-btn-orange flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold shadow-md cursor-pointer self-start sm:self-auto"
         >
           <Sparkles className="w-4 h-4 text-white" />
-          <span>Générer avec RodiumAI (Coach IA)</span>
+          <span>Générer avec le Coach IA</span>
         </button>
       </div>
 
@@ -143,7 +108,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
                   </span>
                   <span
                     className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                      scen.difficulty === 'Élevé' || scen.difficulty === 'Difficile'
+                      scen.difficulty === 'Difficile'
                         ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                         : scen.difficulty === 'Moyen'
                         ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
@@ -175,7 +140,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
                   onClick={() => onSimulateScenario(activeScenario)}
                   className="vigilo-btn-secondary px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
                 >
-                  Aperçu live
+                  Aperçu de la simulation
                 </button>
                 <button
                   onClick={() => onOpenCreateCampaignWithScenario(activeScenario.id)}
@@ -186,33 +151,14 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
               </div>
             </div>
 
-            {/* Test Email Form */}
-            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/40 space-y-3">
+            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/40 space-y-2">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-bold text-indigo-200">Envoyer un vrai test (Live Demo)</span>
+                <span className="text-xs font-bold text-indigo-200">Mode de démonstration</span>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="email"
-                  placeholder="Votre adresse email (pour recevoir le leurre)"
-                  value={testEmail}
-                  onChange={(e) => setTestEmail(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-white/10 text-slate-200 text-xs rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-indigo-500"
-                />
-                <button
-                  onClick={handleSendTestEmail}
-                  disabled={isSendingTest || !testEmail}
-                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs transition-colors cursor-pointer shrink-0"
-                >
-                  {isSendingTest ? 'Envoi en cours...' : 'Envoyer'}
-                </button>
-              </div>
-              {testSuccess && (
-                <div className="text-xs font-mono text-emerald-400">
-                  {testSuccess}
-                </div>
-              )}
+              <p className="text-xs text-slate-300">
+                Le parcours collaborateur est simulé dans l&apos;application ; aucun message n&apos;est transmis à une adresse réelle.
+              </p>
             </div>
 
             <div className="space-y-4">

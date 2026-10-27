@@ -274,23 +274,40 @@ export const vigiloOrgService = {
 export const rodiumAiService = vigiloAiService;
 
 export const vigiloTrainingService = {
+  async getTrainingInvitation(token: string): Promise<{ module: TrainingModule; completed: boolean }> {
+    const response = await apiFetch(`/api/public/training-invitations/${encodeURIComponent(token)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Lien de formation invalide ou expiré');
+    }
+    return { module: data.data as TrainingModule, completed: Boolean(data.completed) };
+  },
+
+  async completeTrainingInvitation(token: string): Promise<void> {
+    const response = await apiFetch(
+      `/api/public/training-invitations/${encodeURIComponent(token)}/complete`,
+      { method: 'POST' }
+    );
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Impossible d’enregistrer la fin de formation');
+    }
+  },
+
   async sendTrainingInvite(params: {
     email: string;
     firstName: string;
     module: TrainingModule;
     origin: string;
   }): Promise<boolean> {
-    try {
-      const response = await apiFetch('/api/send-training-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      if (!response.ok) return false;
-      const data = await response.json();
-      return Boolean(data.success);
-    } catch {
-      return false;
+    const response = await apiFetch('/api/send-training-invite', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Échec de l’envoi de l’invitation');
     }
+    return true;
   },
 };

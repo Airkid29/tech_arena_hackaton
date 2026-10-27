@@ -16,6 +16,7 @@ import {
   getEmployee,
   getOrgSummary,
 } from './orgStore';
+import { DatabaseConfigurationError } from './database';
 
 function adminId(req: AuthRequest): string {
   if (!req.admin?.id) {
@@ -24,93 +25,106 @@ function adminId(req: AuthRequest): string {
   return req.admin.id;
 }
 
-function handleError(res: Response, e: any) {
-  return res.status(e.status || 500).json({ success: false, error: e.message || 'Erreur serveur' });
+function handleError(res: Response, error: unknown) {
+  const status =
+    typeof error === 'object' && error !== null && 'status' in error
+      ? Number(error.status)
+      : error instanceof DatabaseConfigurationError
+        ? 503
+        : 500;
+  if (status >= 500) console.error('[Organisation] Requête échouée:', error);
+  const message =
+    status < 500 && error instanceof Error
+      ? error.message
+      : status === 503
+        ? 'Base de données indisponible ou non configurée'
+        : 'Erreur serveur';
+  return res.status(status).json({ success: false, error: message });
 }
 
 // ─── Summary ────────────────────────────────────────────────────────────────
 
-export function handleOrgSummary(req: AuthRequest, res: Response) {
+export async function handleOrgSummary(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
-    const summary = getOrgSummary(id, req.admin!.companySize);
+    const summary = await getOrgSummary(id, req.admin!.companySize);
     return res.json({ success: true, data: summary });
-  } catch (e: any) {
-    return handleError(res, e);
+  } catch (error) {
+    return handleError(res, error);
   }
 }
 
 // ─── Departments ─────────────────────────────────────────────────────────────
 
-export function handleListDepartments(req: AuthRequest, res: Response) {
+export async function handleListDepartments(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
-    return res.json({ success: true, data: listDepartments(id) });
-  } catch (e: any) {
-    return handleError(res, e);
+    return res.json({ success: true, data: await listDepartments(id) });
+  } catch (error) {
+    return handleError(res, error);
   }
 }
 
-export function handleCreateDepartment(req: AuthRequest, res: Response) {
+export async function handleCreateDepartment(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
     const { name } = req.body as { name?: string };
-    const dept = createDepartment(id, name || '');
+    const dept = await createDepartment(id, name || '');
     return res.status(201).json({ success: true, data: dept });
-  } catch (e: any) {
-    return handleError(res, e);
+  } catch (error) {
+    return handleError(res, error);
   }
 }
 
-export function handleUpdateDepartment(req: AuthRequest, res: Response) {
+export async function handleUpdateDepartment(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
     const departmentId = String(req.params.id || '');
     const { name } = req.body as { name?: string };
-    const dept = updateDepartment(id, departmentId, name || '');
+    const dept = await updateDepartment(id, departmentId, name || '');
     return res.json({ success: true, data: dept });
-  } catch (e: any) {
-    return handleError(res, e);
+  } catch (error) {
+    return handleError(res, error);
   }
 }
 
-export function handleDeleteDepartment(req: AuthRequest, res: Response) {
+export async function handleDeleteDepartment(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
     const departmentId = String(req.params.id || '');
-    deleteDepartment(id, departmentId);
+    await deleteDepartment(id, departmentId);
     return res.json({ success: true });
-  } catch (e: any) {
-    return handleError(res, e);
+  } catch (error) {
+    return handleError(res, error);
   }
 }
 
 // ─── Employees ───────────────────────────────────────────────────────────────
 
-export function handleListEmployees(req: AuthRequest, res: Response) {
+export async function handleListEmployees(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
     const departmentId =
       typeof req.query.departmentId === 'string' ? req.query.departmentId : undefined;
-    return res.json({ success: true, data: listEmployees(id, departmentId) });
-  } catch (e: any) {
-    return handleError(res, e);
+    return res.json({ success: true, data: await listEmployees(id, departmentId) });
+  } catch (error) {
+    return handleError(res, error);
   }
 }
 
-export function handleGetEmployee(req: AuthRequest, res: Response) {
+export async function handleGetEmployee(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
     const employeeId = String(req.params.id || '');
-    const emp = getEmployee(id, employeeId);
+    const emp = await getEmployee(id, employeeId);
     if (!emp) return res.status(404).json({ success: false, error: 'Collaborateur introuvable' });
     return res.json({ success: true, data: emp });
-  } catch (e: any) {
-    return handleError(res, e);
+  } catch (error) {
+    return handleError(res, error);
   }
 }
 
-export function handleCreateEmployee(req: AuthRequest, res: Response) {
+export async function handleCreateEmployee(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
     const body = req.body as {
@@ -120,7 +134,7 @@ export function handleCreateEmployee(req: AuthRequest, res: Response) {
       departmentId?: string;
       role?: string;
     };
-    const emp = createEmployee(id, req.admin!.companySize, {
+    const emp = await createEmployee(id, req.admin!.companySize, {
       firstName: body.firstName || '',
       lastName: body.lastName || '',
       email: body.email || '',
@@ -128,12 +142,12 @@ export function handleCreateEmployee(req: AuthRequest, res: Response) {
       role: body.role,
     });
     return res.status(201).json({ success: true, data: emp });
-  } catch (e: any) {
-    return handleError(res, e);
+  } catch (error) {
+    return handleError(res, error);
   }
 }
 
-export function handleUpdateEmployee(req: AuthRequest, res: Response) {
+export async function handleUpdateEmployee(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
     const employeeId = String(req.params.id || '');
@@ -145,20 +159,20 @@ export function handleUpdateEmployee(req: AuthRequest, res: Response) {
       role?: string;
       riskScore?: number;
     };
-    const emp = updateEmployee(id, employeeId, body);
+    const emp = await updateEmployee(id, employeeId, body);
     return res.json({ success: true, data: emp });
-  } catch (e: any) {
-    return handleError(res, e);
+  } catch (error) {
+    return handleError(res, error);
   }
 }
 
-export function handleDeleteEmployee(req: AuthRequest, res: Response) {
+export async function handleDeleteEmployee(req: AuthRequest, res: Response) {
   try {
     const id = adminId(req);
     const employeeId = String(req.params.id || '');
-    deleteEmployee(id, employeeId);
+    await deleteEmployee(id, employeeId);
     return res.json({ success: true });
-  } catch (e: any) {
-    return handleError(res, e);
+  } catch (error) {
+    return handleError(res, error);
   }
 }

@@ -54,8 +54,6 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   });
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(defaultScenario?.difficulty || 'Moyen');
   const [adminValidated, setAdminValidated] = useState(false);
-  const [sendRealEmails, setSendRealEmails] = useState(false);
-  const [isSending, setIsSending] = useState(false);
 
   const orgDepartments = useMemo(() => {
     if (departments.length > 0) return departments;
@@ -95,7 +93,6 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
       setSelectedDepartmentIds(new Set());
     }
     setAdminValidated(false);
-    setSendRealEmails(false);
   }, [isOpen, baselineCampaign?.id]);
 
   if (!isOpen || scenarios.length === 0) return null;
@@ -197,7 +194,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminValidated || selectedCount === 0) return;
 
@@ -233,25 +230,6 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
       baselineCampaignId: baselineCampaign?.id,
     };
 
-    if (sendRealEmails && selectedEmployees.length > 0) {
-      setIsSending(true);
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      try {
-        await Promise.all(
-          selectedEmployees.map((emp) =>
-            fetch('/api/send-live-test', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: emp.email, scenario: selectedScenario, origin }),
-            })
-          )
-        );
-      } catch (err) {
-        console.error("Erreur lors de l'envoi des emails réels:", err);
-      }
-      setIsSending(false);
-    }
-
     onCreate(newCampaign);
     onClose();
   };
@@ -274,7 +252,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                 {isReTestMode ? 'Campagne de Re-test' : 'Nouvelle campagne'}
               </h2>
               <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                {isReTestMode ? 'Mesurer les progrès post-formation' : 'Cyberattaque contrôlée'}
+                {isReTestMode ? 'Parcours de re-test simulé' : 'Parcours pédagogique simulé'}
               </p>
             </div>
           </div>
@@ -477,19 +455,9 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                   <strong className="text-amber-800 dark:text-amber-300">Validation admin :</strong> j&apos;atteste que cette campagne est autorisée et non punitive au sein de l&apos;entreprise.
                 </span>
               </label>
-              <label className="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-amber-200 dark:border-amber-900/50">
-                <input
-                  type="checkbox"
-                  checked={sendRealEmails}
-                  onChange={(e) => setSendRealEmails(e.target.checked)}
-                  className="mt-1 rounded accent-[var(--primary)]"
-                />
-                <span className="text-[var(--foreground)] text-xs leading-relaxed">
-                  <strong className="text-[var(--primary)]">Emails réels :</strong> envoyer aux{' '}
-                  {selectedCount > 0 ? `${selectedCount} collaborateur(s) sélectionné(s)` : 'collaborateurs sélectionnés'}{' '}
-                  (SMTP requis).
-                </span>
-              </label>
+              <p className="pt-2 border-t border-amber-200 dark:border-amber-900/50 text-[var(--muted-foreground)] text-xs leading-relaxed">
+                Cette version ne transmet aucun email : les parcours et indicateurs sont simulés dans la console.
+              </p>
             </div>
           </div>
 
@@ -503,15 +471,13 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!adminValidated || isSending || selectedCount === 0}
+              disabled={!adminValidated || selectedCount === 0}
               className="vigilo-btn-orange w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-40 cursor-pointer"
             >
               <Play className="w-4 h-4" />
-              {isSending
-                ? 'Envoi…'
-                : isReTestMode
-                  ? `Démarrer le Re-test (${selectedCount})`
-                  : `Lancer la simulation (${selectedCount})`}
+              {isReTestMode
+                ? `Démarrer le Re-test (${selectedCount})`
+                : `Lancer la simulation (${selectedCount})`}
             </button>
           </div>
         </form>

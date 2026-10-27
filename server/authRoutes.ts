@@ -11,6 +11,24 @@ import {
   setSessionCookie,
   clearSessionCookie,
 } from './authMiddleware';
+import { DatabaseConfigurationError } from './database';
+
+function handleAuthError(res: Response, error: unknown) {
+  const status =
+    typeof error === 'object' && error !== null && 'status' in error
+      ? Number(error.status)
+      : error instanceof DatabaseConfigurationError
+        ? 503
+        : 500;
+  if (status >= 500) console.error('[Auth] Requête échouée:', error);
+  const message =
+    status < 500 && error instanceof Error
+      ? error.message
+      : status === 503
+        ? 'Base de données indisponible ou non configurée'
+        : 'Erreur serveur';
+  return res.status(status).json({ success: false, error: message });
+}
 
 export async function handleRegister(req: AuthRequest, res: Response) {
   try {
@@ -31,8 +49,8 @@ export async function handleRegister(req: AuthRequest, res: Response) {
     const token = signSession(admin);
     setSessionCookie(res, token);
     return res.status(201).json({ success: true, data: admin });
-  } catch (e: any) {
-    return res.status(e.status || 500).json({ success: false, error: e.message });
+  } catch (error) {
+    return handleAuthError(res, error);
   }
 }
 
@@ -49,8 +67,8 @@ export async function handleLogin(req: AuthRequest, res: Response) {
     const token = signSession(admin);
     setSessionCookie(res, token);
     return res.json({ success: true, data: admin });
-  } catch (e: any) {
-    return res.status(500).json({ success: false, error: e.message });
+  } catch (error) {
+    return handleAuthError(res, error);
   }
 }
 

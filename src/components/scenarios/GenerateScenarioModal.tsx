@@ -172,7 +172,7 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
                   className="vigilo-btn-orange w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50 cursor-pointer"
                 >
                   <Wand2 className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-                  {isGenerating ? 'Génération…' : 'Générer avec RodiumAI'}
+                  {isGenerating ? 'Génération…' : 'Générer avec le Coach IA'}
                 </button>
               </div>
             </form>
