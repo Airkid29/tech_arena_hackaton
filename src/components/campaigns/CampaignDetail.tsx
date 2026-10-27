@@ -26,6 +26,8 @@ interface CampaignDetailProps {
   onLaunchReTest: (campaign: Campaign) => void;
   onGenerateTraining: (campaign: Campaign) => void;
   onSimulate: (campaign: Campaign) => void;
+  isGeneratingTraining?: boolean;
+  trainingGenerationError?: string;
 }
 
 export const CampaignDetail: React.FC<CampaignDetailProps> = ({
@@ -35,16 +37,20 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
   onLaunchReTest,
   onGenerateTraining,
   onSimulate,
+  isGeneratingTraining = false,
+  trainingGenerationError = '',
 }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState('');
 
   const handleRequestAiAnalysis = async () => {
     setIsAnalyzing(true);
+    setAnalysisError('');
     try {
       const analysis = await rodiumAiService.analyzeCampaign(campaign);
       onUpdateCampaignAnalysis(campaign.id, analysis);
     } catch (err) {
-      console.error('Erreur analyse IA', err);
+      setAnalysisError(err instanceof Error ? err.message : 'Analyse IA indisponible.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -73,21 +79,29 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
 
           <button
             onClick={() => onGenerateTraining(campaign)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-medium border border-indigo-500/40 cursor-pointer"
+            disabled={isGeneratingTraining}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-medium border border-indigo-500/40 disabled:opacity-50 cursor-pointer"
           >
             <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Générer formation ciblée</span>
+            <span>{isGeneratingTraining ? 'Génération…' : 'Générer formation ciblée'}</span>
           </button>
 
           <button
             onClick={() => onLaunchReTest(campaign)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-medium border border-emerald-500/40 cursor-pointer"
+            disabled={campaign.status !== 'terminée'}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-medium border border-emerald-500/40 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
             <span>Lancer un re-test</span>
           </button>
         </div>
       </div>
+
+      {trainingGenerationError && (
+        <p role="alert" className="rounded-lg border border-red-500/40 bg-red-950/30 px-3 py-2 text-xs text-red-200">
+          {trainingGenerationError}
+        </p>
+      )}
 
       {/* Campaign Header Card */}
       <div className="p-6 rounded-xl border border-slate-800 bg-[#0d131f] space-y-4">
@@ -101,7 +115,12 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
                     : 'bg-slate-900 text-slate-400 border-slate-800'
                 }`}
               >
-                {campaign.status === 'en_cours' ? '● En cours' : '✓ Terminée'}
+                {{
+                  brouillon: 'Brouillon — non envoyé',
+                  planifiée: 'Planifiée',
+                  en_cours: '● En cours',
+                  terminée: '✓ Terminée',
+                }[campaign.status]}
               </span>
               <span className="text-xs text-slate-400">·</span>
               <span className="text-xs font-mono text-slate-400">{campaign.category}</span>
@@ -114,12 +133,17 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
             <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
               {campaign.description}
             </p>
+            {campaign.status === 'brouillon' && (
+              <p className="text-xs text-amber-300">
+                Brouillon uniquement : aucun message n&apos;a été envoyé et aucun résultat n&apos;a été mesuré.
+              </p>
+            )}
           </div>
 
           <div className="text-left md:text-right shrink-0">
-            <div className="text-xs text-slate-400">Temps médian de réaction</div>
+            <div className="text-xs text-slate-400">Temps médian de réaction mesuré</div>
             <div className="text-xl font-bold font-mono text-slate-200">
-              {campaign.medianReactionTimeMinutes} min
+              {campaign.medianReactionTimeMinutes ? `${campaign.medianReactionTimeMinutes} min` : '—'}
             </div>
           </div>
         </div>
@@ -157,7 +181,7 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
         </div>
       </div>
 
-      {/* Two columns: Department breakdown & AI RodiumAI Coach */}
+      {/* Two columns: Department breakdown & AI Coach */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left column (5 cols): Department Breakdown */}
         <div className="lg:col-span-5 p-6 rounded-xl border border-slate-800 bg-[#0d131f] space-y-4">
@@ -211,7 +235,7 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
           </div>
         </div>
 
-        {/* Right column (7 cols): AI Cyber Coach — RodiumAI */}
+        {/* Right column (7 cols): AI Cyber Coach */}
         <div className="lg:col-span-7 p-6 rounded-xl border border-slate-800 bg-[#0d131f] space-y-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -220,19 +244,25 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">Vigilo Cyber Coach</h3>
-                <p className="text-[11px] text-slate-400">Analyse comportementale & Remédiation</p>
+                <p className="text-[11px] text-slate-400">Analyse agrégée & Remédiation pédagogique</p>
               </div>
             </div>
 
             <button
               onClick={handleRequestAiAnalysis}
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || campaign.status === 'brouillon' || campaign.delivered === 0}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-medium cursor-pointer disabled:opacity-50 transition-all"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
               <span>{campaign.aiAnalysis ? 'Réanalyser avec l IA' : 'Demander analyse IA'}</span>
             </button>
           </div>
+
+          {analysisError && (
+            <p role="alert" className="rounded-lg border border-red-500/40 bg-red-950/30 px-3 py-2 text-xs text-red-200">
+              {analysisError}
+            </p>
+          )}
 
           {campaign.aiAnalysis ? (
             <div className="space-y-4 text-xs">
@@ -253,6 +283,9 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
                 <p className="text-slate-300 leading-relaxed">
                   {campaign.aiAnalysis.executiveSummary}
                 </p>
+                {campaign.aiAnalysis.warning && (
+                  <p role="status" className="text-amber-300">{campaign.aiAnalysis.warning}</p>
+                )}
               </div>
 
               {/* Vulnerability Factor */}
@@ -283,7 +316,7 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
               <div className="p-4 rounded-lg bg-blue-950/40 border border-blue-900/60 space-y-3">
                 <div className="text-blue-300 font-semibold flex items-center gap-1.5">
                   <GraduationCap className="w-4 h-4 text-blue-400" />
-                  <span>Remédiation recommandée par RodiumAI :</span>
+                  <span>Remédiation recommandée par {campaign.aiAnalysis.engine || 'le coach IA'} :</span>
                 </div>
                 <p className="text-slate-200 leading-relaxed">
                   {campaign.aiAnalysis.trainingAdvice}
@@ -309,14 +342,20 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
               <Sparkles className="w-8 h-8 text-slate-600 mx-auto" />
               <div className="text-sm font-medium text-slate-300">Aucune analyse IA effectuée</div>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Cliquez sur « Demander analyse IA » pour que RodiumAI évalue les comportements et propose la remédiation adaptée.
+                {campaign.delivered > 0
+                  ? 'Demandez une analyse agrégée pour obtenir des recommandations pédagogiques.'
+                  : 'Une analyse ne sera possible qu’après la collecte de données réelles et autorisées.'}
               </p>
               <button
                 onClick={handleRequestAiAnalysis}
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || campaign.status === 'brouillon' || campaign.delivered === 0}
                 className="mt-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition-colors cursor-pointer"
               >
-                {isAnalyzing ? 'Analyse en cours...' : 'Lancer l analyse RodiumAI'}
+                {isAnalyzing
+                  ? 'Analyse en cours...'
+                  : campaign.delivered > 0
+                    ? 'Lancer l’analyse IA'
+                    : 'En attente de données mesurées'}
               </button>
             </div>
           )}

@@ -7,6 +7,7 @@ import {
   type VigiloService,
 } from './authStore';
 import {
+  assertSessionConfiguration,
   signSession,
   setSessionCookie,
   clearSessionCookie,
@@ -32,6 +33,7 @@ function handleAuthError(res: Response, error: unknown) {
 
 export async function handleRegister(req: AuthRequest, res: Response) {
   try {
+    assertSessionConfiguration();
     const { email, password, companyName, companySize, services } = req.body as {
       email?: string;
       password?: string;
@@ -56,6 +58,7 @@ export async function handleRegister(req: AuthRequest, res: Response) {
 
 export async function handleLogin(req: AuthRequest, res: Response) {
   try {
+    assertSessionConfiguration();
     const { email, password } = req.body as { email?: string; password?: string };
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email et mot de passe requis' });

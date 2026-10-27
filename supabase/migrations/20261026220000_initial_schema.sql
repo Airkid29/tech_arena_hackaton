@@ -120,3 +120,16 @@ grant all on public.admins, public.departments, public.employees,
   public.campaigns, public.campaign_events, public.training_modules,
   public.training_invitations
   to service_role;
+
+alter table public.admins
+  add column if not exists simulation_provider text not null default 'mock'
+    check (simulation_provider in ('mock', 'gophish')),
+  add column if not exists company_domain text,
+  add column if not exists industry text,
+  add column if not exists country text not null default 'Togo',
+  add column if not exists preferred_language text not null default 'fr'
+    check (preferred_language in ('fr', 'en')),
+  add column if not exists training_tone text not null default 'professionnel'
+    check (training_tone in ('professionnel', 'accessible', 'direct')),
+  add column if not exists brand_color text not null default '#f97316'
+    check (brand_color ~ '^#[0-9A-Fa-f]{6}$');

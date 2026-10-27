@@ -10,6 +10,41 @@ export const COMPANY_SIZE_MAX_EMPLOYEES: Record<CompanySize, number> = {
   '150+': 200,
 };
 
+export interface CompanyProfile {
+  provider: 'mock' | 'gophish';
+  companyName: string;
+  companyDomain: string;
+  industry: string;
+  country: string;
+  preferredLanguage: 'fr' | 'en';
+  trainingTone: 'professionnel' | 'accessible' | 'direct';
+  brandColor: string;
+}
+
+interface CompanyProfileRow {
+  simulation_provider: 'mock' | 'gophish' | null;
+  company_name: string;
+  company_domain: string | null;
+  industry: string | null;
+  country: string | null;
+  preferred_language: 'fr' | 'en' | null;
+  training_tone: 'professionnel' | 'accessible' | 'direct' | null;
+  brand_color: string | null;
+}
+
+function mapCompanyProfile(row: CompanyProfileRow): CompanyProfile {
+  return {
+    provider: row.simulation_provider || 'mock',
+    companyName: row.company_name,
+    companyDomain: row.company_domain || '',
+    industry: row.industry || '',
+    country: row.country || 'Togo',
+    preferredLanguage: row.preferred_language || 'fr',
+    trainingTone: row.training_tone || 'professionnel',
+    brandColor: row.brand_color || '#f97316',
+  };
+}
+
 export function maxEmployeesForSize(size: CompanySize): number {
   return COMPANY_SIZE_MAX_EMPLOYEES[size] ?? 10;
 }
@@ -92,6 +127,77 @@ function normalizeName(name: string): string {
 
 function throwOnDuplicate(error: { code?: string } | null, message: string): void {
   if (error?.code === '23505') throw httpError(message, 409);
+}
+
+export async function getCompanyProfile(adminId: string): Promise<CompanyProfile> {
+  const result = await getDatabase()
+    .from('admins')
+    .select('simulation_provider,company_name,company_domain,industry,country,preferred_language,training_tone,brand_color')
+    .eq('id', adminId)
+    .maybeSingle();
+  const row = unwrapDatabaseResult('lecture du profil entreprise', result) as CompanyProfileRow | null;
+  if (!row) throw httpError('Compte introuvable', 404);
+  return mapCompanyProfile(row);
+}
+
+export async function updateCompanyProfile(
+  adminId: string,
+  input: Partial<CompanyProfile>
+): Promise<CompanyProfile> {
+  const companyName = typeof input.companyName === 'string' ? normalizeName(input.companyName) : '';
+  const provider = input.provider;
+  const companyDomain = typeof input.companyDomain === 'string'
+    ? input.companyDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/+$/, '')
+    : '';
+  const industry = typeof input.industry === 'string' ? normalizeName(input.industry) : '';
+  const country = typeof input.country === 'string' ? normalizeName(input.country) : '';
+  const preferredLanguage = input.preferredLanguage;
+  const trainingTone = input.trainingTone;
+  const brandColor = input.brandColor;
+
+  if (companyName.length < 2 || companyName.length > 120) {
+    throw httpError('Le nom de l’entreprise doit contenir entre 2 et 120 caractères', 400);
+  }
+  if (provider !== 'mock' && provider !== 'gophish') {
+    throw httpError('Moteur de simulation invalide', 400);
+  }
+  if (companyDomain && (
+    companyDomain.length > 253 ||
+    !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(companyDomain)
+  )) {
+    throw httpError('Le domaine de l’entreprise est invalide', 400);
+  }
+  if (industry.length > 100 || country.length < 2 || country.length > 100) {
+    throw httpError('Secteur ou pays invalide', 400);
+  }
+  if (preferredLanguage !== 'fr' && preferredLanguage !== 'en') {
+    throw httpError('Langue de formation invalide', 400);
+  }
+  if (!['professionnel', 'accessible', 'direct'].includes(String(trainingTone))) {
+    throw httpError('Ton de formation invalide', 400);
+  }
+  if (typeof brandColor !== 'string' || !/^#[0-9a-f]{6}$/i.test(brandColor)) {
+    throw httpError('La couleur de marque doit être un code hexadécimal valide', 400);
+  }
+
+  const result = await getDatabase()
+    .from('admins')
+    .update({
+      simulation_provider: provider,
+      company_name: companyName,
+      company_domain: companyDomain || null,
+      industry: industry || null,
+      country,
+      preferred_language: preferredLanguage,
+      training_tone: trainingTone,
+      brand_color: brandColor.toLowerCase(),
+    })
+    .eq('id', adminId)
+    .select('simulation_provider,company_name,company_domain,industry,country,preferred_language,training_tone,brand_color')
+    .maybeSingle();
+  const row = unwrapDatabaseResult('mise à jour du profil entreprise', result) as CompanyProfileRow | null;
+  if (!row) throw httpError('Compte introuvable', 404);
+  return mapCompanyProfile(row);
 }
 
 export async function listDepartments(adminId: string): Promise<CompanyDepartment[]> {

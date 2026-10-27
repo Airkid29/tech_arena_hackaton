@@ -2,24 +2,18 @@ import React from 'react';
 import {
   Users,
   MousePointerClick,
-  ShieldAlert,
   ShieldCheck,
   ArrowRight,
   TrendingDown,
   TrendingUp,
   Sparkles,
   Play,
-  RotateCcw,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
   Zap,
 } from 'lucide-react';
-import { Campaign, ReTestRecord } from '../../types';
+import { Campaign } from '../../types';
 
 interface OverviewTabProps {
   campaigns: Campaign[];
-  retestRecord: ReTestRecord;
   onSelectCampaign: (campaignId: string) => void;
   onNavigate: (tab: string) => void;
   onOpenCreateCampaign: () => void;
@@ -28,22 +22,21 @@ interface OverviewTabProps {
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   campaigns,
-  retestRecord,
   onSelectCampaign,
   onNavigate,
   onOpenCreateCampaign,
   onOpenEmployeeSimulator,
 }) => {
   // Aggregate statistics across campaigns
-  const totalTargeted = campaigns.reduce((acc, c) => acc + c.targeted, 0);
-  const totalClicked = campaigns.reduce((acc, c) => acc + c.clicked, 0);
-  const totalReported = campaigns.reduce((acc, c) => acc + c.reported, 0);
+  const measuredCampaigns = campaigns.filter((campaign) => campaign.status === 'terminée');
+  const totalTargeted = measuredCampaigns.reduce((acc, c) => acc + c.targeted, 0);
+  const totalClicked = measuredCampaigns.reduce((acc, c) => acc + c.clicked, 0);
+  const totalReported = measuredCampaigns.reduce((acc, c) => acc + c.reported, 0);
 
-  const avgClickRate = totalTargeted > 0 ? ((totalClicked / totalTargeted) * 100).toFixed(1) : '0';
-  const avgReportRate = totalTargeted > 0 ? ((totalReported / totalTargeted) * 100).toFixed(1) : '0';
+  const avgClickRate = totalTargeted > 0 ? `${((totalClicked / totalTargeted) * 100).toFixed(1)}%` : '—';
+  const avgReportRate = totalTargeted > 0 ? `${((totalReported / totalTargeted) * 100).toFixed(1)}%` : '—';
 
-  const activeCampaign = campaigns.find((c) => c.status === 'en_cours') || campaigns[0];
-  const lastFinishedCampaign = campaigns.find((c) => c.status === 'terminée' && c.aiAnalysis);
+  const activeCampaign = campaigns.find((c) => c.status === 'en_cours');
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -63,7 +56,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               « Mesurez et renforcez la vigilance de votre équipe. »
             </h1>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Testez concrètement vos collaborateurs face aux cybermenaces réelles sur Email & WhatsApp plutôt que de vous limiter à des formations théoriques.
+              Préparez des exercices pédagogiques et testez-les dans le simulateur intégré. Les campagnes ne sont pas envoyées par email ou WhatsApp.
             </p>
           </div>
 
@@ -79,7 +72,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               onClick={onOpenEmployeeSimulator}
               className="vigilo-btn-secondary flex items-center gap-2 px-4 py-3 rounded-xl text-slate-200 font-semibold text-sm cursor-pointer"
             >
-              <span>Tester en direct</span>
+              <span>Ouvrir le simulateur</span>
             </button>
           </div>
         </div>
@@ -89,7 +82,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           {[
             { step: '01', title: 'Simuler', desc: 'Attaque contrôlée (Email / WhatsApp)' },
             { step: '02', title: 'Mesurer', desc: 'Comportements réels (Clics & Signalements)' },
-            { step: '03', title: 'Analyser', desc: 'Diagnostic par RodiumAI' },
+            { step: '03', title: 'Analyser', desc: 'Diagnostic par le coach IA' },
             { step: '04', title: 'Former', desc: 'Micro-module de 2 minutes' },
             { step: '05', title: 'Re-tester', desc: 'Mesure de l évolution concrète' },
           ].map((item, idx) => (
@@ -119,7 +112,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
           <div className="mt-4">
             <div className="text-3xl font-extrabold text-white font-mono">{totalTargeted}</div>
-            <p className="text-xs text-slate-400 mt-1">Ciblés sur les campagnes récents</p>
+            <p className="text-xs text-slate-400 mt-1">Ciblés sur les campagnes terminées</p>
           </div>
         </div>
 
@@ -131,10 +124,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-extrabold text-rose-400 font-mono">{avgClickRate}%</div>
+            <div className="text-3xl font-extrabold text-rose-400 font-mono">{avgClickRate}</div>
             <div className="flex items-center gap-1 text-xs text-emerald-400 mt-1">
               <TrendingDown className="w-3.5 h-3.5" />
-              <span>-18.4% vs mois dernier</span>
+              <span>Calculé à partir des campagnes terminées</span>
             </div>
           </div>
         </div>
@@ -147,10 +140,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-extrabold text-emerald-400 font-mono">{avgReportRate}%</div>
+            <div className="text-3xl font-extrabold text-emerald-400 font-mono">{avgReportRate}</div>
             <div className="flex items-center gap-1 text-xs text-emerald-400 mt-1">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>+24.1% adoption du reflexe</span>
+              <span>Calculé à partir des campagnes terminées</span>
             </div>
           </div>
         </div>
@@ -163,8 +156,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-extrabold text-[#fb923c] font-mono">84 / 100</div>
-            <p className="text-xs text-slate-400 mt-1">Niveau Élevé (ANCy Standard)</p>
+            <div className="text-3xl font-extrabold text-[#fb923c] font-mono">— / 100</div>
+            <p className="text-xs text-slate-400 mt-1">Aucun score sans données mesurées</p>
           </div>
         </div>
       </div>
@@ -173,47 +166,59 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Active Campaign */}
         <div className="lg:col-span-2 vigilo-card p-6 space-y-6">
-          <div className="flex items-center justify-between border-b border-white/10 pb-4">
-            <div>
-              <span className="text-xs font-mono text-[#fb923c]">Campagne en cours</span>
-              <h2 className="text-lg font-bold text-white">{activeCampaign.name}</h2>
+          {activeCampaign ? (
+            <>
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div>
+                  <span className="text-xs font-mono text-[#fb923c]">Campagne en cours</span>
+                  <h2 className="text-lg font-bold text-white">{activeCampaign.name}</h2>
+                </div>
+                <span className="text-xs font-mono text-emerald-400">En cours</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-center py-2">
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10">
+                  <div className="text-xs text-slate-400 font-mono">Ciblés</div>
+                  <div className="text-2xl font-bold text-white mt-1 font-mono">{activeCampaign.targeted}</div>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10">
+                  <div className="text-xs text-slate-400 font-mono">Clics mesurés</div>
+                  <div className="text-2xl font-bold text-rose-400 mt-1 font-mono">{activeCampaign.clicked} ({activeCampaign.clickRate}%)</div>
+                </div>
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10">
+                  <div className="text-xs text-slate-400 font-mono">Signalements mesurés</div>
+                  <div className="text-2xl font-bold text-emerald-400 mt-1 font-mono">{activeCampaign.reported} ({activeCampaign.reportRate}%)</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  onClick={() => onSelectCampaign(activeCampaign.id)}
+                  className="text-xs font-bold text-[#fb923c] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Voir le rapport détaillé</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={onOpenEmployeeSimulator}
+                  className="vigilo-btn-secondary px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+                >
+                  Tester l&apos;aperçu pédagogique
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <h2 className="text-lg font-bold text-white">Aucune campagne en cours</h2>
+              <p className="text-sm text-slate-400">
+                Les nouveaux exercices restent des brouillons. Aucun email n&apos;est envoyé depuis cette plateforme.
+              </p>
+              <button
+                onClick={onOpenCreateCampaign}
+                className="vigilo-btn-orange px-4 py-2 rounded-lg text-xs font-bold cursor-pointer"
+              >
+                Créer un brouillon
+              </button>
             </div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              En cours
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 text-center py-2">
-            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10">
-              <div className="text-xs text-slate-400 font-mono">Ciblés</div>
-              <div className="text-2xl font-bold text-white mt-1 font-mono">{activeCampaign.targeted}</div>
-            </div>
-            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10">
-              <div className="text-xs text-slate-400 font-mono">Piégés (Clic)</div>
-              <div className="text-2xl font-bold text-rose-400 mt-1 font-mono">{activeCampaign.clicked} ({activeCampaign.clickRate}%)</div>
-            </div>
-            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10">
-              <div className="text-xs text-slate-400 font-mono">Signalés</div>
-              <div className="text-2xl font-bold text-emerald-400 mt-1 font-mono">{activeCampaign.reported} ({activeCampaign.reportRate}%)</div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={() => onSelectCampaign(activeCampaign.id)}
-              className="text-xs font-bold text-[#fb923c] hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <span>Voir le rapport détaillé</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={onOpenEmployeeSimulator}
-              className="vigilo-btn-secondary px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
-            >
-              Tester l'aperçu collaborateur
-            </button>
-          </div>
+          )}
         </div>
 
         {/* Right Col: AI Coach Snapshot */}
@@ -225,7 +230,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
             <h3 className="text-base font-bold text-white">Recommandation Stratégique</h3>
             <p className="text-xs text-slate-300 leading-relaxed bg-white/[0.02] border border-white/10 p-4 rounded-xl">
-              "L'équipe Finance affiche une vulnérabilité aux pièges WhatsApp de type Urgence Direction. Déployer un micro-module sur la vérification hors-canal."
+              Aucune recommandation n&apos;est disponible sans résultats mesurés. Le coach IA ne doit pas inférer de vulnérabilités à partir de données fictives.
             </p>
           </div>
 

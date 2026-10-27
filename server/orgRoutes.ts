@@ -15,6 +15,9 @@ import {
   deleteEmployee,
   getEmployee,
   getOrgSummary,
+  getCompanyProfile,
+  updateCompanyProfile,
+  type CompanyProfile,
 } from './orgStore';
 import { DatabaseConfigurationError } from './database';
 
@@ -49,6 +52,25 @@ export async function handleOrgSummary(req: AuthRequest, res: Response) {
     const id = adminId(req);
     const summary = await getOrgSummary(id, req.admin!.companySize);
     return res.json({ success: true, data: summary });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function handleGetCompanyProfile(req: AuthRequest, res: Response) {
+  try {
+    const id = adminId(req);
+    return res.json({ success: true, data: await getCompanyProfile(id) });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function handleUpdateCompanyProfile(req: AuthRequest, res: Response) {
+  try {
+    const id = adminId(req);
+    const profile = await updateCompanyProfile(id, req.body as Partial<CompanyProfile>);
+    return res.json({ success: true, data: profile });
   } catch (error) {
     return handleError(res, error);
   }

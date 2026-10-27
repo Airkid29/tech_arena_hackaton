@@ -46,6 +46,13 @@ export const CampaignList: React.FC<CampaignListProps> = ({
     return matchesFilter && matchesSearch;
   });
 
+  const statusLabel = (status: Campaign['status']) => ({
+    brouillon: 'Brouillon — non envoyé',
+    planifiée: 'Planifiée',
+    en_cours: 'En cours',
+    terminée: 'Terminée',
+  })[status];
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Top Header */}
@@ -56,7 +63,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
             <span>Campagnes de simulation</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Gérez vos exercices de cyberattaques contrôlées (Email & WhatsApp) et suivez les comportements en direct.
+            Enregistrez des brouillons pédagogiques. Aucun envoi de campagne ni suivi de comportement n&apos;est activé.
           </p>
         </div>
 
@@ -86,6 +93,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
         <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
           {[
             { id: 'all', label: 'Toutes' },
+            { id: 'brouillon', label: 'Brouillons' },
             { id: 'en_cours', label: 'En cours' },
             { id: 'terminée', label: 'Terminées' },
             { id: 'retest', label: 'Re-tests' },
@@ -107,6 +115,16 @@ export const CampaignList: React.FC<CampaignListProps> = ({
 
       {/* Campaign List Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {filteredCampaigns.length === 0 && (
+          <div className="md:col-span-2 rounded-xl border border-dashed border-white/15 p-8 text-center">
+            <p className="text-sm font-semibold text-slate-200">
+              {campaigns.length ? 'Aucune campagne ne correspond à ces filtres.' : 'Aucun brouillon enregistré.'}
+            </p>
+            <p className="mt-2 text-xs text-slate-400">
+              La création d&apos;une campagne n&apos;envoie pas de message et ne crée aucun résultat simulé.
+            </p>
+          </div>
+        )}
         {filteredCampaigns.map((camp) => (
           <div
             key={camp.id}
@@ -128,10 +146,12 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                     className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border ${
                       camp.status === 'en_cours'
                         ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                        : 'bg-slate-800 text-slate-400 border-white/10'
+                        : camp.status === 'brouillon'
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                          : 'bg-slate-800 text-slate-400 border-white/10'
                     }`}
                   >
-                    {camp.status === 'en_cours' ? '● En cours' : 'Terminée'}
+                    {statusLabel(camp.status)}
                   </span>
                 </div>
               </div>
@@ -151,13 +171,13 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                   <div className="font-bold text-white font-mono mt-0.5">{camp.targeted}</div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/10">
-                  <div className="text-[10px] text-slate-400 font-mono">Clics</div>
+                  <div className="text-[10px] text-slate-400 font-mono">Clics mesurés</div>
                   <div className="font-bold text-rose-400 font-mono mt-0.5">
                     {camp.clicked} ({camp.clickRate}%)
                   </div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/10">
-                  <div className="text-[10px] text-slate-400 font-mono">Signalés</div>
+                  <div className="text-[10px] text-slate-400 font-mono">Signalements mesurés</div>
                   <div className="font-bold text-emerald-400 font-mono mt-0.5">
                     {camp.reported} ({camp.reportRate}%)
                   </div>
@@ -171,7 +191,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                 className="text-slate-400 hover:text-white flex items-center gap-1.5 cursor-pointer font-mono text-[11px]"
               >
                 <Eye className="w-3.5 h-3.5 text-[#fb923c]" />
-                <span>Tester le piège</span>
+                <span>Aperçu pédagogique</span>
               </button>
 
               <button

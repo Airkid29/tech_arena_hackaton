@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, Play, Users } from 'lucide-react';
-import { Campaign, Scenario, DifficultyLevel, Employee, CompanyDepartment, DepartmentStats } from '../../types';
+import { Campaign, Scenario, DifficultyLevel, Employee, CompanyDepartment } from '../../types';
 
 interface CreateCampaignModalProps {
   isOpen: boolean;
@@ -8,7 +8,11 @@ interface CreateCampaignModalProps {
   scenarios: Scenario[];
   employees: Employee[];
   departments?: CompanyDepartment[];
-  onCreate: (campaignData: Partial<Campaign>) => void;
+  onCreate: (campaignData: Pick<
+    Campaign,
+    'name' | 'description' | 'scenarioId' | 'scenarioName' | 'category' |
+    'difficulty' | 'targetEmployeeIds' | 'isReTest' | 'baselineCampaignId'
+  >) => Promise<Campaign>;
   preselectedScenarioId?: string;
   isReTestMode?: boolean;
   baselineCampaign?: Campaign;
@@ -54,6 +58,8 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   });
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(defaultScenario?.difficulty || 'Moyen');
   const [adminValidated, setAdminValidated] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const orgDepartments = useMemo(() => {
     if (departments.length > 0) return departments;
@@ -159,79 +165,31 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
     setSelectedDepartmentIds(new Set());
   };
 
-  const buildTargetGroupLabel = (selected: Employee[]): string => {
-    if (selected.length === 0) return 'Aucune cible';
-    if (selected.length === employees.length && employees.length > 0) {
-      return `Tous les collaborateurs (${selected.length})`;
-    }
-    const deptNames = Array.from(
-      new Set(
-        selectedDepartmentIds.size > 0
-          ? orgDepartments.filter((d) => selectedDepartmentIds.has(d.id)).map((d) => d.name)
-          : selected.map((e) => e.department)
-      )
-    );
-    if (deptNames.length > 0 && deptNames.length <= 3) {
-      return `${deptNames.join(', ')} (${selected.length})`;
-    }
-    return `Sélection personnalisée (${selected.length})`;
-  };
-
-  const buildDepartmentStats = (selected: Employee[]): DepartmentStats[] => {
-    const counts = new Map<string, number>();
-    for (const emp of selected) {
-      const name = emp.department || '—';
-      counts.set(name, (counts.get(name) || 0) + 1);
-    }
-    return Array.from(counts.entries()).map(([name, targeted]) => ({
-      name,
-      targeted,
-      opened: 0,
-      clicked: 0,
-      reported: 0,
-      clickRate: 0,
-      reportRate: 0,
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminValidated || selectedCount === 0) return;
+    if (!adminValidated || selectedCount === 0 || saving) return;
 
     const selectedEmployees = employees.filter((emp) => selectedEmployeeIds.has(emp.id));
-    const targetedCount = selectedEmployees.length;
-    const departmentsStats = buildDepartmentStats(selectedEmployees);
-    const targetGroup = buildTargetGroupLabel(selectedEmployees);
-
-    const newCampaign: Partial<Campaign> = {
-      id: `camp-${Date.now()}`,
-      name,
-      description,
-      scenarioId: selectedScenario.id,
-      scenarioName: selectedScenario.name,
-      category: selectedScenario.category,
-      difficulty,
-      targetGroup,
-      targetEmployeeIds: selectedEmployees.map((e) => e.id),
-      targetDepartmentIds: Array.from(selectedDepartmentIds),
-      status: 'en_cours',
-      createdAt: new Date().toISOString(),
-      launchedAt: new Date().toISOString(),
-      targeted: targetedCount,
-      delivered: targetedCount,
-      opened: Math.round(targetedCount * 0.4),
-      clicked: Math.round(targetedCount * (isReTestMode ? 0.08 : 0.25)),
-      reported: Math.round(targetedCount * (isReTestMode ? 0.75 : 0.45)),
-      clickRate: isReTestMode ? 8.0 : 25.0,
-      reportRate: isReTestMode ? 75.0 : 45.0,
-      medianReactionTimeMinutes: isReTestMode ? 7 : 18,
-      departments: departmentsStats,
-      isReTest: isReTestMode,
-      baselineCampaignId: baselineCampaign?.id,
-    };
-
-    onCreate(newCampaign);
-    onClose();
+    setSaving(true);
+    setSubmitError('');
+    try {
+      await onCreate({
+        name: name.trim(),
+        description: description.trim(),
+        scenarioId: selectedScenario.id,
+        scenarioName: selectedScenario.name,
+        category: selectedScenario.category,
+        difficulty,
+        targetEmployeeIds: selectedEmployees.map((employee) => employee.id),
+        isReTest: isReTestMode,
+        baselineCampaignId: baselineCampaign?.id,
+      });
+      onClose();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Impossible d’enregistrer le brouillon.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -267,6 +225,11 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-sm">
+            {submitError && (
+              <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                {submitError}
+              </p>
+            )}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-[var(--foreground)]">Nom de la campagne</label>
               <input
@@ -452,11 +415,11 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                   className="mt-1 rounded accent-[var(--primary)]"
                 />
                 <span className="text-[var(--foreground)] text-xs leading-relaxed">
-                  <strong className="text-amber-800 dark:text-amber-300">Validation admin :</strong> j&apos;atteste que cette campagne est autorisée et non punitive au sein de l&apos;entreprise.
+                  <strong className="text-amber-800 dark:text-amber-300">Validation admin :</strong> j&apos;atteste que ce brouillon pédagogique est autorisé et non punitif au sein de l&apos;entreprise.
                 </span>
               </label>
               <p className="pt-2 border-t border-amber-200 dark:border-amber-900/50 text-[var(--muted-foreground)] text-xs leading-relaxed">
-                Cette version ne transmet aucun email : les parcours et indicateurs sont simulés dans la console.
+                Cette action enregistre uniquement un brouillon. Aucun email n&apos;est envoyé et aucun indicateur n&apos;est créé automatiquement.
               </p>
             </div>
           </div>
@@ -471,13 +434,11 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!adminValidated || selectedCount === 0}
+              disabled={!adminValidated || selectedCount === 0 || saving}
               className="vigilo-btn-orange w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-40 cursor-pointer"
             >
               <Play className="w-4 h-4" />
-              {isReTestMode
-                ? `Démarrer le Re-test (${selectedCount})`
-                : `Lancer la simulation (${selectedCount})`}
+              {saving ? 'Enregistrement…' : `Enregistrer le brouillon (${selectedCount})`}
             </button>
           </div>
         </form>

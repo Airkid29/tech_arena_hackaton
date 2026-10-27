@@ -153,7 +153,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-6xl mx-auto px-6 flex flex-wrap justify-center gap-12 sm:gap-24 text-[var(--muted-foreground)] text-sm font-mono opacity-80">
           <div className="flex items-center gap-2"><Lock className="w-4 h-4" /> RGPD Compliant</div>
           <div className="flex items-center gap-2"><Server className="w-4 h-4" /> Open-Source Engine</div>
-          <div className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Powered by RodiumAI</div>
+          <div className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Coach IA sécurisé</div>
         </div>
       </section>
 

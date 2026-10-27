@@ -8,7 +8,7 @@ import {
   getDatabase,
   unwrapDatabaseResult,
 } from './database';
-import { listEmployees } from './orgStore';
+import { getCompanyProfile, listEmployees } from './orgStore';
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
@@ -21,7 +21,12 @@ function escapeHtml(value: string): string {
 }
 
 function requiredText(value: unknown, field: string, maxLength: number): string {
-  if (typeof value !== 'string' || !value.trim() || value.length > maxLength) {
+  if (
+    typeof value !== 'string' ||
+    !value.trim() ||
+    value.length > maxLength ||
+    /[\u0000-\u001f\u007f]/.test(value)
+  ) {
     throw Object.assign(new Error(`${field} invalide`), { status: 400 });
   }
   return value.trim();
@@ -69,12 +74,61 @@ function validTrainingModule(value: unknown): value is Record<string, unknown> {
 }
 
 function publicAppUrl(): URL {
-  const configured = process.env.APP_URL || 'http://localhost:3000';
-  const url = new URL(configured);
-  if (url.protocol !== 'https:' && url.hostname !== 'localhost') {
-    throw Object.assign(new Error('APP_URL doit utiliser HTTPS en dehors du développement local'), { status: 500 });
+  const configured = process.env.APP_URL || (
+    process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000'
+  );
+  if (!configured) {
+    throw Object.assign(new Error('APP_URL doit être configurée'), {
+      status: 503,
+      publicMessage: 'Configuration email incomplète : définissez APP_URL sur l’adresse HTTPS de la plateforme.',
+    });
+  }
+  let url: URL;
+  try {
+    url = new URL(configured);
+  } catch {
+    throw Object.assign(new Error('APP_URL invalide'), {
+      status: 503,
+      publicMessage: 'Configuration email invalide : vérifiez APP_URL.',
+    });
+  }
+  if (
+    (process.env.NODE_ENV === 'production' && (url.protocol !== 'https:' || url.hostname === 'localhost')) ||
+    (url.protocol !== 'https:' && url.hostname !== 'localhost')
+  ) {
+    throw Object.assign(new Error('APP_URL doit utiliser HTTPS en dehors du développement local'), {
+      status: 503,
+      publicMessage: 'Configuration email invalide : APP_URL doit utiliser HTTPS en production.',
+    });
   }
   return url;
+}
+
+function smtpErrorDetails(error: unknown): { code?: string; responseCode?: number; command?: string } {
+  if (!error || typeof error !== 'object') return {};
+  const details = error as Record<string, unknown>;
+  return {
+    ...(typeof details.code === 'string' && /^[A-Z0-9_]+$/i.test(details.code)
+      ? { code: details.code }
+      : {}),
+    ...(typeof details.responseCode === 'number' ? { responseCode: details.responseCode } : {}),
+    ...(typeof details.command === 'string' && /^[A-Z0-9 ]{1,32}$/i.test(details.command)
+      ? { command: details.command }
+      : {}),
+  };
+}
+
+function smtpPublicFailure(error: unknown): Error & { status: number; publicMessage: string } {
+  const details = smtpErrorDetails(error);
+  let publicMessage = 'Le serveur email est indisponible. Réessayez plus tard.';
+  if (details.code === 'EAUTH') {
+    publicMessage = 'Authentification SMTP refusée. Vérifiez le compte et le mot de passe SMTP.';
+  } else if (['ECONNECTION', 'ETIMEDOUT', 'ESOCKET', 'ENOTFOUND'].includes(details.code || '')) {
+    publicMessage = 'Connexion SMTP impossible. Vérifiez l’hôte, le port, TLS et l’accès réseau.';
+  } else if (details.responseCode && details.responseCode >= 500) {
+    publicMessage = 'Le serveur SMTP a refusé le message. Vérifiez l’expéditeur et les règles de relais.';
+  }
+  return Object.assign(new Error(publicMessage), { status: 503, publicMessage });
 }
 
 export async function handleSendTrainingInvite(req: AuthRequest, res: Response) {
@@ -105,6 +159,7 @@ export async function handleSendTrainingInvite(req: AuthRequest, res: Response) 
         error: 'Le destinataire ne fait pas partie de votre annuaire autorisé',
       });
     }
+    const companyProfile = await getCompanyProfile(adminId);
 
     const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
     if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
@@ -113,8 +168,31 @@ export async function handleSendTrainingInvite(req: AuthRequest, res: Response) 
         error: 'Service email indisponible : la configuration SMTP serveur est incomplète.',
       });
     }
-
+    const smtpPort = Number(SMTP_PORT || 587);
+    if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
+      return res.status(503).json({
+        success: false,
+        error: 'Configuration SMTP invalide : vérifiez SMTP_PORT.',
+      });
+    }
     const trainingUrl = publicAppUrl();
+
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      requireTLS: smtpPort !== 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+    try {
+      await transporter.verify();
+    } catch (error) {
+      console.error('[Email formation] Vérification SMTP échouée:', smtpErrorDetails(error));
+      transporter.close();
+      const failure = smtpPublicFailure(error);
+      return res.status(failure.status).json({ success: false, error: failure.publicMessage });
+    }
+
     const token = randomBytes(32).toString('hex');
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -145,26 +223,42 @@ export async function handleSendTrainingInvite(req: AuthRequest, res: Response) 
     trainingUrl.searchParams.set('trainingInvite', token);
     const safeTitle = escapeHtml(moduleTitle);
     const safeFirstName = escapeHtml(employee.firstName);
+    const safeCompanyName = escapeHtml(companyProfile.companyName);
+    const isEnglish = companyProfile.preferredLanguage === 'en';
+    const safeBrandColor = /^#[0-9a-f]{6}$/i.test(companyProfile.brandColor)
+      ? companyProfile.brandColor
+      : '#f97316';
     const fromName = escapeHtml(process.env.SMTP_FROM_NAME || 'VIGILO Formations');
-    const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: Number(SMTP_PORT || 587),
-      secure: Number(SMTP_PORT) === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    });
-
-    await transporter.sendMail({
+    try {
+      await transporter.sendMail({
       from: `"${fromName}" <${SMTP_USER}>`,
       to: employee.email,
-      subject: `[VIGILO] Micro-formation assignée : ${moduleTitle}`,
-      text: `Bonjour ${employee.firstName},\n\nVotre équipe vous invite à suivre la micro-formation « ${moduleTitle} » (${duration} min).\n\nOuvrir la formation : ${trainingUrl.toString()}`,
-      html: `<div style="font-family:Segoe UI,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:8px;">
-  <p>Bonjour ${safeFirstName},</p>
-  <p>Votre équipe vous invite à suivre la micro-formation <strong>${safeTitle}</strong> (${duration} min).</p>
-  <p><a href="${escapeHtml(trainingUrl.toString())}">Ouvrir la formation</a></p>
-  <p>Cette invitation est un contenu pédagogique VIGILO.</p>
+      subject: `[${companyProfile.companyName}] ${isEnglish ? 'Training assigned' : 'Formation assignée'}: ${moduleTitle}`,
+      text: `${isEnglish ? 'Hello' : 'Bonjour'} ${employee.firstName},\n\n${companyProfile.companyName} ${isEnglish ? 'invites you to complete the training' : 'vous invite à suivre la micro-formation'} « ${moduleTitle} » (${duration} min).\n\n${isEnglish ? 'Open the training' : 'Ouvrir la formation'}: ${trainingUrl.toString()}`,
+      html: `<div style="font-family:Segoe UI,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-top:5px solid ${safeBrandColor};border-radius:8px;">
+  <p style="color:${safeBrandColor};font-weight:700;">${safeCompanyName}</p>
+  <p>${isEnglish ? 'Hello' : 'Bonjour'} ${safeFirstName},</p>
+  <p>${safeCompanyName} ${isEnglish ? 'invites you to complete the training' : 'vous invite à suivre la micro-formation'} <strong>${safeTitle}</strong> (${duration} min).</p>
+  <p><a href="${escapeHtml(trainingUrl.toString())}">${isEnglish ? 'Open the training' : 'Ouvrir la formation'}</a></p>
+  <p>${isEnglish ? 'This is a VIGILO learning invitation.' : 'Cette invitation est un contenu pédagogique VIGILO.'}</p>
 </div>`,
-    });
+      });
+    } catch (error) {
+      console.error('[Email formation] Envoi SMTP échoué:', smtpErrorDetails(error));
+      try {
+        const cleanupResult = await database
+          .from('training_invitations')
+          .delete()
+          .eq('admin_id', adminId)
+          .eq('token_hash', tokenHash);
+        unwrapDatabaseResult('nettoyage de l’invitation non envoyée', cleanupResult);
+      } catch (cleanupError) {
+        console.error('[Email formation] Nettoyage de l’invitation échoué:', cleanupError);
+      }
+      throw smtpPublicFailure(error);
+    } finally {
+      transporter.close();
+    }
 
     return res.json({
       success: true,
@@ -178,10 +272,17 @@ export async function handleSendTrainingInvite(req: AuthRequest, res: Response) 
         : error instanceof DatabaseConfigurationError
           ? 503
           : 500;
-    if (status >= 500) console.error('[Email formation] Échec de l’envoi:', error);
+    const hasPublicMessage = typeof error === 'object' && error !== null && 'publicMessage' in error;
+    if (status >= 500 && !hasPublicMessage) {
+      console.error('[Email formation] Échec de l’envoi:', error);
+    }
     return res.status(status).json({
       success: false,
-      error: status < 500 && error instanceof Error ? error.message : 'Service email indisponible',
+      error: status < 500 && error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'publicMessage' in error
+          ? String(error.publicMessage)
+          : 'Service email indisponible',
     });
   }
 }

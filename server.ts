@@ -10,7 +10,7 @@ import {
   handleLogout,
   handleMe,
 } from './server/authRoutes';
-import { requireAuth, type AuthRequest } from './server/authMiddleware';
+import { assertSessionConfiguration, requireAuth, type AuthRequest } from './server/authMiddleware';
 import {
   handleOrgSummary,
   handleListDepartments,
@@ -22,6 +22,8 @@ import {
   handleCreateEmployee,
   handleUpdateEmployee,
   handleDeleteEmployee,
+  handleGetCompanyProfile,
+  handleUpdateCompanyProfile,
 } from './server/orgRoutes';
 import {
   handleAnalyzeResults,
@@ -33,6 +35,8 @@ import {
   handleGetTrainingInvitation,
   handleSendTrainingInvite,
 } from './server/emailRoutes';
+import { handleGophishCampaigns } from './server/gophishRoutes';
+import { handleCreateCampaignDraft, handleListCampaigns } from './server/campaignRoutes';
 
 dotenv.config();
 
@@ -58,8 +62,34 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 app.use(cookieParser());
 
-app.post('/api/auth/register', handleRegister);
-app.post('/api/auth/login', handleLogin);
+function createRateLimiter(limit: number, windowMs: number, keyPrefix: string) {
+  const entries = new Map<string, { count: number; resetAt: number }>();
+  return (req: Request, res: Response, next: NextFunction) => {
+    const now = Date.now();
+    const identity = (req as AuthRequest).admin?.id || req.ip || 'unknown';
+    const key = `${keyPrefix}:${identity}`;
+    const current = entries.get(key);
+    if (!current || current.resetAt <= now) {
+      entries.set(key, { count: 1, resetAt: now + windowMs });
+    } else if (current.count >= limit) {
+      res.setHeader('Retry-After', String(Math.ceil((current.resetAt - now) / 1000)));
+      res.status(429).json({ success: false, error: 'Trop de requêtes. Réessayez plus tard.' });
+      return;
+    } else {
+      current.count += 1;
+    }
+
+    if (entries.size > 5_000) {
+      for (const [entryKey, entry] of entries) {
+        if (entry.resetAt <= now) entries.delete(entryKey);
+      }
+    }
+    next();
+  };
+}
+
+app.post('/api/auth/register', createRateLimiter(5, 60 * 60 * 1000, 'register'), handleRegister);
+app.post('/api/auth/login', createRateLimiter(10, 15 * 60 * 1000, 'login'), handleLogin);
 app.post('/api/auth/logout', handleLogout);
 app.get('/api/auth/me', requireAuth, handleMe);
 
@@ -85,10 +115,25 @@ app.post('/api/public/training-invitations/:token/complete', handleCompleteTrain
 
 app.use('/api', (req, res, next) => {
   if (req.path === '/health') return next();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    const origin = req.get('origin');
+    let originHost: string | null = null;
+    try {
+      originHost = origin ? new URL(origin).host : null;
+    } catch {
+      originHost = null;
+    }
+    if (!originHost || originHost !== req.get('host')) {
+      res.status(403).json({ success: false, error: 'Origine de requête invalide' });
+      return;
+    }
+  }
   return requireAuth(req as AuthRequest, res, next);
 });
 
 app.get('/api/org/summary', handleOrgSummary);
+app.get('/api/org/profile', handleGetCompanyProfile);
+app.patch('/api/org/profile', handleUpdateCompanyProfile);
 app.get('/api/org/departments', handleListDepartments);
 app.post('/api/org/departments', handleCreateDepartment);
 app.patch('/api/org/departments/:id', handleUpdateDepartment);
@@ -99,14 +144,18 @@ app.post('/api/org/employees', handleCreateEmployee);
 app.patch('/api/org/employees/:id', handleUpdateEmployee);
 app.delete('/api/org/employees/:id', handleDeleteEmployee);
 
-app.post('/api/vigilo-ai/generate-scenario', handleGenerateScenario);
-app.post('/api/rodium-ai/generate-scenario', handleGenerateScenario);
-app.post('/api/vigilo-ai/analyze-results', handleAnalyzeResults);
-app.post('/api/rodium-ai/analyze-results', handleAnalyzeResults);
-app.post('/api/vigilo-ai/generate-training', handleGenerateTraining);
-app.post('/api/rodium-ai/generate-training', handleGenerateTraining);
+const aiRateLimit = createRateLimiter(20, 5 * 60 * 1000, 'ai');
+app.get('/api/campaigns', handleListCampaigns);
+app.post('/api/campaigns', createRateLimiter(20, 60 * 60 * 1000, 'campaign-draft'), handleCreateCampaignDraft);
+app.post('/api/vigilo-ai/generate-scenario', aiRateLimit, handleGenerateScenario);
+app.post('/api/rodium-ai/generate-scenario', aiRateLimit, handleGenerateScenario);
+app.post('/api/vigilo-ai/analyze-results', aiRateLimit, handleAnalyzeResults);
+app.post('/api/rodium-ai/analyze-results', aiRateLimit, handleAnalyzeResults);
+app.post('/api/vigilo-ai/generate-training', aiRateLimit, handleGenerateTraining);
+app.post('/api/rodium-ai/generate-training', aiRateLimit, handleGenerateTraining);
 
-app.post('/api/send-training-invite', handleSendTrainingInvite);
+app.post('/api/send-training-invite', createRateLimiter(10, 60 * 60 * 1000, 'training-invite'), handleSendTrainingInvite);
+app.get('/api/integrations/gophish/campaigns', handleGophishCampaigns);
 app.post('/api/send-live-test', (_req: Request, res: Response) => {
   res.status(410).json({
     success: false,
@@ -136,6 +185,7 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 async function startServer() {
+  assertSessionConfiguration();
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({

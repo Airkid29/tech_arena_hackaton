@@ -798,17 +798,18 @@ export const INITIAL_RETEST_RECORD: ReTestRecord = {
 
 export const INITIAL_SETTINGS: SimulationProviderSettings = {
   provider: 'mock',
-  gophishUrl: 'https://gophish.internal.vigilo.local:3333',
-  gophishApiKey: 'gp_sec_89f0293da82103a8f9b9',
   mockMode: {
     interactivePreview: true,
     autoSimulateReplies: true,
     educationalLandingActive: true,
   },
-  companyName: 'Acme Conseil & Solutions',
-  companyDomain: 'acme-conseil.fr',
-  companySize: '11-50',
-  services: ['Phishing', 'WhatsApp Phishing'],
+  companyName: 'Entreprise',
+  companyDomain: '',
+  industry: '',
+  country: 'Togo',
+  preferredLanguage: 'fr',
+  trainingTone: 'professionnel',
+  brandColor: '#f97316',
 };
 
 export const INITIAL_FLASH_ARTICLES: FlashArticle[] = [

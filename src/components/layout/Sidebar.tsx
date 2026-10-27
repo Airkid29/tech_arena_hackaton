@@ -63,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'ai-coach',
       label: t.nav.coach,
       icon: Sparkles,
-      badge: 'RodiumAI',
+      badge: 'IA',
     },
     {
       id: 'directory',
@@ -137,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {item.badge && (
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
-                      item.badge === 'Nouveau' || item.badge === 'New' || item.badge === 'RodiumAI'
+                      item.badge === 'Nouveau' || item.badge === 'New' || item.badge === 'RodiumAI' || item.badge === 'IA'
                         ? 'vigilo-pill-orange'
                         : 'vigilo-pill'
                     }`}

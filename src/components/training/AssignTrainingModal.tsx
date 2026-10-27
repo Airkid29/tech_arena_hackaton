@@ -20,7 +20,7 @@ interface AssignTrainingModalProps {
     moduleId: string,
     employeeIds: string[],
     channel: 'Email' | 'WhatsApp'
-  ) => Promise<{ success: boolean; sentCount: number }>;
+  ) => Promise<{ success: boolean; sentCount: number; error?: string }>;
 }
 
 export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
@@ -34,7 +34,7 @@ export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [channel, setChannel] = useState<'Email' | 'WhatsApp'>('Email');
   const [sending, setSending] = useState(false);
-  const [done, setDone] = useState<{ count: number } | null>(null);
+  const [done, setDone] = useState<{ count: number; error?: string } | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -73,6 +73,10 @@ export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
       const result = await onAssign(module.id, Array.from(selectedIds), channel);
       if (result.success) {
         setDone({ count: result.sentCount });
+      } else if (result.sentCount > 0) {
+        setDone({ count: result.sentCount, error: result.error });
+      } else {
+        setSendError(result.error || 'Aucune invitation n’a été envoyée.');
       }
     } catch (error) {
       setSendError(error instanceof Error ? error.message : 'L’invitation n’a pas pu être envoyée.');
@@ -111,12 +115,17 @@ export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
         {done ? (
           <div className="p-10 text-center space-y-4">
             <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto" />
-            <h3 className="text-lg font-bold text-[var(--foreground)]">Invitation envoyée</h3>
+            <h3 className="text-lg font-bold text-[var(--foreground)]">
+              {done.error ? 'Envoi partiel' : 'Invitation envoyée'}
+            </h3>
             <p className="text-sm text-[var(--muted-foreground)] max-w-md mx-auto">
               Lien micro-formation ({module.durationMinutes} min) envoyé à{' '}
               <strong className="text-[var(--foreground)]">{done.count}</strong> collaborateur(s) via{' '}
               email.
             </p>
+            {done.error && (
+              <p role="alert" className="text-xs text-amber-600 dark:text-amber-300">{done.error}</p>
+            )}
             <button type="button" onClick={handleClose} className="vigilo-btn-orange px-6 py-2.5 rounded-lg text-sm font-bold text-white cursor-pointer">
               Fermer
             </button>

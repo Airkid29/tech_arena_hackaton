@@ -10,14 +10,32 @@ export interface AuthRequest extends Request {
 
 export function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.length < 16) {
-    throw new Error('SESSION_SECRET manquant ou trop court (≥ 16) dans .env');
+  if (
+    !secret ||
+    secret.length < 32 ||
+    secret === 'replace-with-a-random-secret-at-least-32-characters' ||
+    secret.trim() !== secret
+  ) {
+    throw new Error('SESSION_SECRET absent, non valide ou trop court (≥ 32 caractères) dans .env');
   }
   return secret;
 }
 
-export function signSession(admin: AdminPublic): string {
+function sessionTtlDays(): number {
   const days = Number(process.env.AUTH_TOKEN_TTL_DAYS || 7);
+  if (!Number.isInteger(days) || days < 1 || days > 30) {
+    throw new Error('AUTH_TOKEN_TTL_DAYS doit être un entier entre 1 et 30');
+  }
+  return days;
+}
+
+export function assertSessionConfiguration(): void {
+  getSessionSecret();
+  sessionTtlDays();
+}
+
+export function signSession(admin: AdminPublic): string {
+  const days = sessionTtlDays();
   return jwt.sign(
     { sub: admin.id, email: admin.email, companyName: admin.companyName },
     getSessionSecret(),
@@ -26,7 +44,7 @@ export function signSession(admin: AdminPublic): string {
 }
 
 export function setSessionCookie(res: Response, token: string): void {
-  const days = Number(process.env.AUTH_TOKEN_TTL_DAYS || 7);
+  const days = sessionTtlDays();
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',

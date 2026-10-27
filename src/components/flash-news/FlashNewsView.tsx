@@ -19,14 +19,12 @@ import { FlashArticle } from '../../types';
 
 interface FlashNewsViewProps {
   articles: FlashArticle[];
-  onBroadcastArticle: (articleId: string) => void;
-  onCreateArticle: (newArticle: Omit<FlashArticle, 'id' | 'publishedAt' | 'readCount' | 'readRate'>) => void;
+  onCreateArticle: (newArticle: Omit<FlashArticle, 'id' | 'publishedAt' | 'readCount' | 'readRate' | 'totalRecipients'>) => void;
   isDark?: boolean;
 }
 
 export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
   articles,
-  onBroadcastArticle,
   onCreateArticle,
   isDark = true,
 }) => {
@@ -44,9 +42,8 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
 
   const activeArticle = articles.find((a) => a.id === selectedArticleId) || articles[0];
 
-  const handleBroadcast = (id: string, articleTitle: string) => {
-    onBroadcastArticle(id);
-    setBroadcastedNotice(`Bulletin diffusé avec succès sur Email et WhatsApp à l'ensemble des 32 collaborateurs !`);
+  const handleBroadcast = () => {
+    setBroadcastedNotice('La diffusion email/WhatsApp n’est pas connectée : aucun message n’a été envoyé.');
     setTimeout(() => setBroadcastedNotice(null), 5000);
   };
 
@@ -60,7 +57,6 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
       summary: summary || title,
       content,
       author: 'Pôle Sécurité IT VIGILO',
-      totalRecipients: 32,
       keyTakeaway: keyTakeaway || 'Toujours vérifier avant de cliquer ou de transférer des fonds.',
       channels,
     });
@@ -70,7 +66,7 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
     setSummary('');
     setKeyTakeaway('');
     setIsCreateModalOpen(false);
-    setBroadcastedNotice('Nouvelle alerte rédigée et prête à être diffusée !');
+    setBroadcastedNotice('Alerte ajoutée à cette session uniquement ; elle n’est ni enregistrée sur le serveur ni diffusée.');
     setTimeout(() => setBroadcastedNotice(null), 4000);
   };
 
@@ -86,7 +82,7 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Mettez au parfum vos collaborateurs entre deux campagnes via des alertes courtes diffusées sur Email & WhatsApp.
+            Rédigez des contenus de sensibilisation. La diffusion email et WhatsApp n&apos;est pas connectée.
           </p>
         </div>
 
@@ -155,7 +151,9 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
                   <span className="flex items-center gap-1">
                     <Users className="w-3.5 h-3.5" />
-                    <span>{art.readCount}/{art.totalRecipients} lecteurs ({art.readRate}%)</span>
+                    <span>{art.totalRecipients > 0
+                      ? `${art.readCount}/${art.totalRecipients} lecteurs (${art.readRate}%)`
+                      : 'Aucune diffusion mesurée'}</span>
                   </span>
 
                   <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-0.5">
@@ -214,7 +212,9 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
               <div className="text-xs text-slate-500 space-y-1">
                 <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <span>{activeArticle.readCount} collaborateurs ont validé la lecture sur 32</span>
+                  <span>{activeArticle.totalRecipients > 0
+                    ? `${activeArticle.readCount} collaborateurs ont validé la lecture sur ${activeArticle.totalRecipients}`
+                    : 'Aucun suivi de lecture disponible'}</span>
                 </div>
                 <div className="w-48 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                   <div
@@ -225,12 +225,12 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
               </div>
 
               <button
-                onClick={() => handleBroadcast(activeArticle.id, activeArticle.title)}
+                onClick={handleBroadcast}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-sm transition-all cursor-pointer self-start sm:self-auto"
                 title="Renvoyer une notification rappel aux collaborateurs"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Diffuser aux collaborateurs</span>
+                <span>Vérifier la diffusion (non connectée)</span>
               </button>
             </div>
           </div>
@@ -247,7 +247,7 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
                   Rédiger un Flash Info de sensibilisation
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Ce bulletin sera notifié aux collaborateurs par email et/ou WhatsApp
+                  Ce bulletin restera dans cette session. Il ne sera pas envoyé.
                 </p>
               </div>
               <button
