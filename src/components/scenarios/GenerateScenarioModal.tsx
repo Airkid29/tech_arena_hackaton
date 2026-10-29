@@ -1,43 +1,60 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Sparkles, Wand2, Check } from 'lucide-react';
-import { Scenario, ScenarioCategory, DifficultyLevel } from '../../types';
+import { Scenario, ScenarioCategory, DifficultyLevel, SimulationProviderSettings } from '../../types';
 import { rodiumAiService } from '../../services/api';
 
 interface GenerateScenarioModalProps {
   isOpen: boolean;
   onClose: () => void;
   onScenarioGenerated: (newScenario: Scenario) => void;
+  companyProfile: SimulationProviderSettings;
 }
 
 export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
   isOpen,
   onClose,
   onScenarioGenerated,
+  companyProfile,
 }) => {
   const [scenarioType, setScenarioType] = useState<ScenarioCategory>('Phishing');
   const [targetAudience, setTargetAudience] = useState('Direction & Finance');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('Moyen');
-  const [companyContext, setCompanyContext] = useState(
-    'PME de 35 collaborateurs, Microsoft 365, WhatsApp pro, clôture fiscale en cours.'
-  );
+  const [companyContext, setCompanyContext] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResult, setGeneratedResult] = useState<Record<string, unknown> | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) {
+      setGeneratedResult(null);
+      setErrorMessage('');
+      return;
+    }
+    const profileContext = [
+      companyProfile.industry && `secteur : ${companyProfile.industry}`,
+      `pays : ${companyProfile.country}`,
+      companyProfile.companyDomain && `domaine officiel : ${companyProfile.companyDomain}`,
+    ].filter(Boolean).join(', ');
+    setCompanyContext(profileContext || 'Entreprise de taille PME');
+  }, [companyProfile, isOpen]);
 
   if (!isOpen) return null;
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsGenerating(true);
+    setErrorMessage('');
     try {
       const data = await rodiumAiService.generateScenario({
         scenarioType,
         targetAudience,
         difficulty,
-        companyContext,
+        companyContext: companyContext.trim(),
+        trainingTone: companyProfile.trainingTone,
       });
       setGeneratedResult(data);
     } catch (err) {
-      console.error('Erreur génération scénario', err);
+      setErrorMessage(err instanceof Error ? err.message : 'La génération du scénario a échoué.');
     } finally {
       setIsGenerating(false);
     }
@@ -45,30 +62,39 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
 
   const handleSaveAndUse = () => {
     if (!generatedResult) return;
-    const gr = generatedResult as Record<string, string | string[]>;
+    const readText = (key: string, fallback: string) =>
+      typeof generatedResult[key] === 'string' ? generatedResult[key] as string : fallback;
+    const readList = (key: string, fallback: string[]) =>
+      Array.isArray(generatedResult[key])
+        ? generatedResult[key].filter((value): value is string => typeof value === 'string')
+        : fallback;
     const newScenario: Scenario = {
       id: `scen-ai-${Date.now()}`,
-      name: (gr.name as string) || `${scenarioType} sur-mesure Vigilo Coach`,
+      name: readText('name', `Atelier pédagogique ${scenarioType}`),
       category: scenarioType,
       difficulty,
-      senderName: (gr.senderName as string) || 'Notification Sécurité',
-      senderEmail: (gr.senderEmail as string) || 'alerte@support-securite-cloud.fr',
-      subject: (gr.subject as string) || 'Action requise sur votre compte',
-      previewText: (gr.previewText as string) || 'Scénario généré par Vigilo Coach',
-      body: (gr.body as string) || '<p>Ceci est un test de simulation VIGILO.</p>',
-      psychologicalTriggers: (gr.psychologicalTriggers as string[]) || ['Urgence', 'Autorité'],
-      redFlags: (gr.redFlags as string[]) || ['Nom de domaine non officiel', 'Pression temporelle'],
-      landingPageContent:
-        (gr.landingPageContent as string) ||
-        'Ceci était un exercice VIGILO. Aucun identifiant n a été compromis.',
+      senderName: companyProfile.preferredLanguage === 'en'
+        ? 'VIGILO learning example'
+        : 'Exemple pédagogique VIGILO',
+      senderEmail: 'exemple@simulation.invalid',
+      subject: `[${companyProfile.preferredLanguage === 'en' ? 'VIGILO EXERCISE' : 'EXERCICE VIGILO'}] ${scenarioType} · ${targetAudience}`,
+      previewText: readText('previewText', `Atelier pédagogique pour ${targetAudience}`),
+      body: readText('body', '<p>Atelier pédagogique non envoyable.</p>'),
+      psychologicalTriggers: readList('psychologicalTriggers', []),
+      redFlags: readList('redFlags', []),
+      landingPageContent: readText('landingPageContent', 'Vérifiez toute demande par un canal indépendant connu.'),
       isAiGenerated: true,
     };
     onScenarioGenerated(newScenario);
     onClose();
   };
 
-  const triggers = (generatedResult?.psychologicalTriggers as string[]) || [];
-  const redFlags = (generatedResult?.redFlags as string[]) || [];
+  const triggers = Array.isArray(generatedResult?.psychologicalTriggers)
+    ? generatedResult.psychologicalTriggers.filter((value): value is string => typeof value === 'string')
+    : [];
+  const redFlags = Array.isArray(generatedResult?.redFlags)
+    ? generatedResult.redFlags.filter((value): value is string => typeof value === 'string')
+    : [];
 
   return (
     <div
@@ -84,9 +110,9 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
               <Sparkles className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base font-bold text-[var(--foreground)]">Générateur RodiumAI</h2>
+              <h2 className="text-base font-bold text-[var(--foreground)]">Atelier IA personnalisé</h2>
               <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                Scénario sur-mesure pour votre PME
+                Contenu pédagogique contextualisé, non réutilisable comme message réel
               </p>
             </div>
           </div>
@@ -116,6 +142,8 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
                     <option value="Smishing">Smishing (SMS)</option>
                     <option value="MFA Fatigue">MFA Fatigue</option>
                     <option value="Social Engineering">Social Engineering</option>
+                    <option value="Ransomware">Ransomware</option>
+                    <option value="QR Code (Quishing)">QR Code (Quishing)</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -158,12 +186,18 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
                 <label className="text-xs font-semibold text-[var(--foreground)]">Contexte PME</label>
                 <textarea
                   value={companyContext}
-                  onChange={(e) => setCompanyContext(e.target.value)}
+                onChange={(e) => setCompanyContext(e.target.value.slice(0, 300))}
                   rows={3}
                   className="vigilo-input w-full px-3 py-2.5 rounded-lg text-sm resize-none"
                   placeholder="Fournisseurs, logiciels, période fiscale…"
                 />
               </div>
+
+              {errorMessage && (
+                <p role="alert" className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+                  {errorMessage}
+                </p>
+              )}
 
               <div className="pt-2 flex justify-stretch sm:justify-end">
                 <button
@@ -172,7 +206,7 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
                   className="vigilo-btn-orange w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50 cursor-pointer"
                 >
                   <Wand2 className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-                  {isGenerating ? 'Génération…' : 'Générer avec RodiumAI'}
+                  {isGenerating ? 'Génération…' : 'Générer avec le Coach IA'}
                 </button>
               </div>
             </form>
@@ -181,8 +215,13 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <Check className="w-4 h-4 shrink-0" />
-                  Scénario généré avec succès
+                  Atelier pédagogique généré · {String(generatedResult._engine || 'vigilo-builtin')}
                 </div>
+                {typeof generatedResult._warning === 'string' && generatedResult._warning && (
+                  <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    {generatedResult._warning}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => setGeneratedResult(null)}
@@ -224,7 +263,7 @@ export const GenerateScenarioModal: React.FC<GenerateScenarioModalProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 rounded-lg bg-[var(--card)] border border-[var(--card-border)]">
-                    <span className="font-semibold text-[var(--foreground)] text-xs">Leviers psychologiques</span>
+                    <span className="font-semibold text-[var(--foreground)] text-xs">Axes de vigilance</span>
                     <ul className="mt-2 space-y-1 text-[var(--muted-foreground)] text-xs">
                       {triggers.map((tr, i) => (
                         <li key={i} className="flex items-start gap-1.5">

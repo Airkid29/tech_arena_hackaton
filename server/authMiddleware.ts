@@ -10,14 +10,32 @@ export interface AuthRequest extends Request {
 
 export function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.length < 16) {
-    throw new Error('SESSION_SECRET manquant ou trop court (≥ 16) dans .env');
+  if (
+    !secret ||
+    secret.length < 32 ||
+    secret === 'replace-with-a-random-secret-at-least-32-characters' ||
+    secret.trim() !== secret
+  ) {
+    throw new Error('SESSION_SECRET absent, non valide ou trop court (≥ 32 caractères) dans .env');
   }
   return secret;
 }
 
-export function signSession(admin: AdminPublic): string {
+function sessionTtlDays(): number {
   const days = Number(process.env.AUTH_TOKEN_TTL_DAYS || 7);
+  if (!Number.isInteger(days) || days < 1 || days > 30) {
+    throw new Error('AUTH_TOKEN_TTL_DAYS doit être un entier entre 1 et 30');
+  }
+  return days;
+}
+
+export function assertSessionConfiguration(): void {
+  getSessionSecret();
+  sessionTtlDays();
+}
+
+export function signSession(admin: AdminPublic): string {
+  const days = sessionTtlDays();
   return jwt.sign(
     { sub: admin.id, email: admin.email, companyName: admin.companyName },
     getSessionSecret(),
@@ -26,7 +44,7 @@ export function signSession(admin: AdminPublic): string {
 }
 
 export function setSessionCookie(res: Response, token: string): void {
-  const days = Number(process.env.AUTH_TOKEN_TTL_DAYS || 7);
+  const days = sessionTtlDays();
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -40,7 +58,8 @@ export function clearSessionCookie(res: Response): void {
   res.clearCookie(COOKIE_NAME, { path: '/' });
 }
 
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  let subject: string;
   try {
     const header = req.headers.authorization;
     const bearer = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
@@ -50,15 +69,23 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
       return;
     }
     const payload = jwt.verify(token, getSessionSecret()) as { sub: string };
-    const admin = findAdminById(payload.sub);
+    subject = payload.sub;
+  } catch {
+    res.status(401).json({ success: false, error: 'Session expirée ou invalide' });
+    return;
+  }
+
+  try {
+    const admin = await findAdminById(subject);
     if (!admin) {
       res.status(401).json({ success: false, error: 'Session invalide' });
       return;
     }
     req.admin = admin;
     next();
-  } catch {
-    res.status(401).json({ success: false, error: 'Session expirée ou invalide' });
+  } catch (error) {
+    console.error('[Auth] Impossible de vérifier la session auprès de Supabase:', error);
+    res.status(503).json({ success: false, error: 'Service de données temporairement indisponible' });
   }
 }
 

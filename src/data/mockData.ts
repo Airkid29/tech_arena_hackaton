@@ -1,9 +1,9 @@
 import { Campaign, Scenario, TrainingModule, ReTestRecord, SimulationProviderSettings, FlashArticle, Employee } from '../types';
 
 export const INITIAL_EMPLOYEES: Employee[] = [
-  { id: 'emp-1', firstName: 'Jean', lastName: 'Dupont', email: 'jean.dupont@entreprise.com', department: 'Finance', role: 'Comptable', riskScore: 85 },
-  { id: 'emp-2', firstName: 'Marie', lastName: 'Curie', email: 'marie.curie@entreprise.com', department: 'IT', role: 'Développeuse', riskScore: 12 },
-  { id: 'emp-3', firstName: 'Paul', lastName: 'Martin', email: 'paul.martin@entreprise.com', department: 'RH', role: 'Manager', riskScore: 45 },
+  { id: 'emp-1', firstName: 'Rachid', lastName: 'BAWA', email: 'abdoulrachidbawa@gmail.com', department: 'IT', role: 'DevOps', riskScore: 85 },
+  { id: 'emp-2', firstName: 'Joel', lastName: 'DENKEY', email: 'marie.curie@entreprise.com', department: 'IT', role: 'Développeuse', riskScore: 12 },
+  { id: 'emp-3', firstName: 'Olivier', lastName: 'FIABI', email: 'paul.martin@entreprise.com', department: 'RH', role: 'Manager', riskScore: 45 },
 ];
 
 export const INITIAL_SCENARIOS: Scenario[] = [
@@ -798,17 +798,18 @@ export const INITIAL_RETEST_RECORD: ReTestRecord = {
 
 export const INITIAL_SETTINGS: SimulationProviderSettings = {
   provider: 'mock',
-  gophishUrl: 'https://gophish.internal.vigilo.local:3333',
-  gophishApiKey: 'gp_sec_89f0293da82103a8f9b9',
   mockMode: {
     interactivePreview: true,
     autoSimulateReplies: true,
     educationalLandingActive: true,
   },
-  companyName: 'Acme Conseil & Solutions',
-  companyDomain: 'acme-conseil.fr',
-  companySize: '11-50',
-  services: ['Phishing', 'WhatsApp Phishing'],
+  companyName: 'Entreprise',
+  companyDomain: '',
+  industry: '',
+  country: 'Togo',
+  preferredLanguage: 'fr',
+  trainingTone: 'professionnel',
+  brandColor: '#f97316',
 };
 
 export const INITIAL_FLASH_ARTICLES: FlashArticle[] = [

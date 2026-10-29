@@ -13,6 +13,7 @@ import {
   Clock,
   RotateCcw,
   Sparkles,
+  Play,
 } from 'lucide-react';
 import { Campaign } from '../../types';
 
@@ -21,6 +22,7 @@ interface CampaignListProps {
   onSelectCampaign: (id: string) => void;
   onOpenCreateModal: () => void;
   onSimulateCampaign: (campaign: Campaign) => void;
+  onLaunchCampaign?: (campaign: Campaign) => void;
 }
 
 export const CampaignList: React.FC<CampaignListProps> = ({
@@ -28,6 +30,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
   onSelectCampaign,
   onOpenCreateModal,
   onSimulateCampaign,
+  onLaunchCampaign,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -46,6 +49,13 @@ export const CampaignList: React.FC<CampaignListProps> = ({
     return matchesFilter && matchesSearch;
   });
 
+  const statusLabel = (status: Campaign['status']) => ({
+    brouillon: 'Brouillon — non envoyé',
+    planifiée: 'Planifiée',
+    en_cours: 'En cours',
+    terminée: 'Terminée',
+  })[status];
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Top Header */}
@@ -56,7 +66,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
             <span>Campagnes de simulation</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Gérez vos exercices de cyberattaques contrôlées (Email & WhatsApp) et suivez les comportements en direct.
+            Pilotez vos simulations d&apos;ingénierie sociale, mesurez la vulnérabilité humaine et renforcez la cyber-résilience de vos collaborateurs.
           </p>
         </div>
 
@@ -86,6 +96,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
         <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
           {[
             { id: 'all', label: 'Toutes' },
+            { id: 'brouillon', label: 'Brouillons' },
             { id: 'en_cours', label: 'En cours' },
             { id: 'terminée', label: 'Terminées' },
             { id: 'retest', label: 'Re-tests' },
@@ -107,6 +118,16 @@ export const CampaignList: React.FC<CampaignListProps> = ({
 
       {/* Campaign List Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {filteredCampaigns.length === 0 && (
+          <div className="md:col-span-2 rounded-xl border border-dashed border-white/15 p-8 text-center">
+            <p className="text-sm font-semibold text-slate-200">
+              {campaigns.length ? 'Aucune campagne ne correspond à ces filtres.' : 'Aucun brouillon enregistré.'}
+            </p>
+            <p className="mt-2 text-xs text-slate-400">
+              La création d&apos;une campagne n&apos;envoie pas de message et ne crée aucun résultat simulé.
+            </p>
+          </div>
+        )}
         {filteredCampaigns.map((camp) => (
           <div
             key={camp.id}
@@ -125,13 +146,18 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                     </span>
                   )}
                   <span
-                    className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border ${
+                    className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${
                       camp.status === 'en_cours'
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                        : 'bg-slate-800 text-slate-400 border-white/10'
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 font-semibold'
+                        : camp.status === 'brouillon'
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                          : 'bg-slate-800 text-slate-400 border-white/10'
                     }`}
                   >
-                    {camp.status === 'en_cours' ? '● En cours' : 'Terminée'}
+                    {camp.status === 'en_cours' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    )}
+                    {statusLabel(camp.status)}
                   </span>
                 </div>
               </div>
@@ -151,13 +177,13 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                   <div className="font-bold text-white font-mono mt-0.5">{camp.targeted}</div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/10">
-                  <div className="text-[10px] text-slate-400 font-mono">Clics</div>
+                  <div className="text-[10px] text-slate-400 font-mono">Clics mesurés</div>
                   <div className="font-bold text-rose-400 font-mono mt-0.5">
                     {camp.clicked} ({camp.clickRate}%)
                   </div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/10">
-                  <div className="text-[10px] text-slate-400 font-mono">Signalés</div>
+                  <div className="text-[10px] text-slate-400 font-mono">Signalements mesurés</div>
                   <div className="font-bold text-emerald-400 font-mono mt-0.5">
                     {camp.reported} ({camp.reportRate}%)
                   </div>
@@ -166,13 +192,26 @@ export const CampaignList: React.FC<CampaignListProps> = ({
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-white/10 text-xs">
-              <button
-                onClick={() => onSimulateCampaign(camp)}
-                className="text-slate-400 hover:text-white flex items-center gap-1.5 cursor-pointer font-mono text-[11px]"
-              >
-                <Eye className="w-3.5 h-3.5 text-[#fb923c]" />
-                <span>Tester le piège</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onSimulateCampaign(camp)}
+                  className="text-slate-400 hover:text-white flex items-center gap-1.5 cursor-pointer font-mono text-[11px]"
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#fb923c]" />
+                  <span>Aperçu piège</span>
+                </button>
+
+                {onLaunchCampaign && camp.status === 'brouillon' && (
+                  <button
+                    onClick={() => onLaunchCampaign(camp)}
+                    className="px-2.5 py-1 rounded-lg bg-[#f2620a] hover:bg-[#e05606] text-white text-[11px] font-bold flex items-center gap-1 shadow-md transition-all cursor-pointer"
+                    title="Lancer cette campagne immédiatement"
+                  >
+                    <Play className="w-3 h-3 fill-white" />
+                    <span>Lancer</span>
+                  </button>
+                )}
+              </div>
 
               <button
                 onClick={() => onSelectCampaign(camp.id)}

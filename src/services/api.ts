@@ -1,5 +1,14 @@
-import { Campaign, ScenarioCategory, DifficultyLevel, AIAnalysis, TrainingModule } from '../types';
-import type { AdminPublic, CompanySize, VigiloService, CompanyDepartment, OrgEmployee, OrgSummary } from '../types';
+import { Campaign, Scenario, ScenarioCategory, DifficultyLevel, AIAnalysis, TrainingModule } from '../types';
+import type {
+  AdminPublic,
+  CompanySize,
+  VigiloService,
+  CompanyDepartment,
+  OrgEmployee,
+  OrgSummary,
+  SimulationProviderSettings,
+  GophishCampaignSummary,
+} from '../types';
 
 async function apiFetch(url: string, init: RequestInit = {}) {
   const response = await fetch(url, {
@@ -60,149 +69,171 @@ export interface GenerateScenarioParams {
   targetAudience: string;
   difficulty: DifficultyLevel;
   companyContext: string;
+  trainingTone: 'professionnel' | 'accessible' | 'direct';
 }
 
 export const vigiloAiService = {
   async generateScenario(params: GenerateScenarioParams) {
-    try {
-      const response = await apiFetch('/api/vigilo-ai/generate-scenario', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      if (!response.ok) {
-        throw new Error(`Erreur réseau HTTP ${response.status}`);
-      }
-      const data = await response.json();
-      return data.data;
-    } catch (err) {
-      console.warn('[VIGILO] Utilisation du moteur de secours Vigilo Coach local', err);
-      // Realistic fallback
-      return {
-        name: `${params.scenarioType} : Simulation de contrôle ${params.targetAudience}`,
-        category: params.scenarioType,
-        difficulty: params.difficulty,
-        senderName: params.scenarioType === 'Fake Invoice' ? 'Trésorerie & Comptabilité Partenaires' : 'Centre d Authentification Sécurisée',
-        senderEmail: params.scenarioType === 'Fake Invoice' ? 'compta@service-reglement-securise.fr' : 'securite@cloud-identity-verification.net',
-        subject: params.scenarioType === 'Fake Invoice' ? 'Notification : Changement de RIB fournisseur pour règlement urgent' : 'Alerte de sécurité : Confirmation obligatoire de vos accès sous 4h',
-        previewText: 'Simulation ciblée configurée par Vigilo Coach',
-        body: `<div style="font-family:sans-serif;padding:20px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;">
-          <p>Bonjour,</p>
-          <p>Ceci est une simulation contrôlée envoyée dans le cadre de votre programme de vigilance.</p>
-          <p style="margin:20px 0;"><a href="#vigilo-trap-link" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none;font-weight:600;">Vérifier et continuer</a></p>
-          <p style="color:#64748b;font-size:12px;">Équipe Cybersécurité VIGILO</p>
-        </div>`,
-        psychologicalTriggers: ['Urgence', 'Autorité', 'Conformité'],
-        redFlags: ['Nom de domaine non habituel', 'Délai d expiration court', 'Lien non officiel'],
-        landingPageContent: 'Ceci était un test contrôlé VIGILO. Aucun mot de passe n a été transmis.',
-      };
+    const response = await apiFetch('/api/vigilo-ai/generate-scenario', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || `Erreur génération IA (HTTP ${response.status})`);
     }
+    return {
+      ...data.data,
+      _engine: data.engine || 'vigilo-builtin',
+      _warning: data.warning || '',
+    } as Record<string, unknown>;
   },
 
   async analyzeCampaign(campaign: Campaign): Promise<AIAnalysis> {
-    try {
-      const response = await apiFetch('/api/vigilo-ai/analyze-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          campaignName: campaign.name,
-          targeted: campaign.targeted,
-          delivered: campaign.delivered,
-          opened: campaign.opened,
-          clicked: campaign.clicked,
-          reported: campaign.reported,
-          clickRate: campaign.clickRate,
-          reportRate: campaign.reportRate,
-          scenarioType: campaign.category,
-          departments: campaign.departments,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur réseau HTTP ${response.status}`);
-      }
-      const data = await response.json();
-      return {
-        ...data.data,
-        analyzedAt: new Date().toISOString(),
-      };
-    } catch (err) {
-      console.warn('[VIGILO] Utilisation de l analyse Vigilo Coach intégrée', err);
-      const isHighClick = campaign.clickRate > 20;
-      const riskLevel = campaign.clickRate > 30 ? 'Critique' : isHighClick ? 'Élevé' : campaign.clickRate > 10 ? 'Modéré' : 'Faible';
-
-      return {
-        executiveSummary: `La campagne "${campaign.name}" affiche un taux de compromission de ${campaign.clickRate}% et un taux de signalement de ${campaign.reportRate}%. L analyse comportementale démontre une sensibilité accrue aux sentiments d urgence.`,
-        riskLevel,
-        vulnerabilityFactor: campaign.category === 'Fake Invoice' 
-          ? 'L automatisme de paiement et la pression d échéance sont les principaux facteurs déclencheurs.'
-          : 'La peur de perdre l accès aux emails ou aux fichiers partagés a primé sur la vérification d identité.',
-        departmentVulnerabilities: campaign.departments.map(d => ({
-          department: d.name,
-          riskScore: d.clickRate > 25 ? '8/10' : d.clickRate > 15 ? '6/10' : '3/10',
-          comment: d.clickRate > 25 ? 'Taux de clic supérieur à la moyenne : formation prioritaire requise.' : 'Bon niveau de détection et signalements rapides.',
-        })),
-        recommendations: [
-          'Diffuser la micro-formation VIGILO ciblée de 4 minutes à l ensemble de la cohorte.',
-          'Mettre en avant publiquement les collaborateurs ayant signalé le courriel pour encourager l émulation positive.',
-          'Planifier un re-test automatisé sous 10 à 14 jours.',
-        ],
-        trainingAdvice: `Le taux de clic de ${campaign.clickRate}% indique un besoin immédiat d entraînement sur le scénario ${campaign.category}. Nous recommandons la micro-formation interactive VIGILO de 4 minutes.`,
-        analyzedAt: new Date().toISOString(),
-      };
+    const response = await apiFetch('/api/vigilo-ai/analyze-results', {
+      method: 'POST',
+      body: JSON.stringify({
+        campaignId: campaign.id,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || `Erreur d'analyse IA (HTTP ${response.status})`);
     }
+    return {
+      ...data.data,
+      engine: typeof data.engine === 'string' ? data.engine : 'vigilo-builtin',
+      warning: typeof data.warning === 'string' ? data.warning : undefined,
+    } as AIAnalysis;
   },
 
-  async generateTraining(scenarioType: ScenarioCategory, vulnerabilityFocus: string): Promise<Partial<TrainingModule>> {
-    try {
-      const response = await apiFetch('/api/vigilo-ai/generate-training', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenarioType, vulnerabilityFocus }),
-      });
-      if (!response.ok) {
-        throw new Error(`Erreur réseau HTTP ${response.status}`);
-      }
-      const data = await response.json();
-      return data.data;
-    } catch (err) {
-      console.warn('[VIGILO] Utilisation du module de formation par défaut', err);
-      return {
-        title: `Micro-formation ciblée : Déjouer les attaques de type ${scenarioType}`,
-        durationMinutes: 4,
-        category: scenarioType,
-        situation: {
-          context: `Un collaborateur est confronté à un message suspect de type ${scenarioType} conçu pour exploiter un réflexe d urgence.`,
-          sampleSnippet: '« Important : Action requise immédiatement pour régulariser votre situation. »',
-        },
-        warningSigns: [
-          { sign: 'Urgence anormale', description: 'Une menace de pénalité ou de blocage rapide sans préavis.' },
-          { sign: 'Canal de contact douteux', description: 'Une demande sensible transmise par email sans canal sécurisé.' },
-          { sign: 'Absence d authentification', description: 'Lien demandant des informations confidentielles sans MFA.' },
-        ],
-        correctReaction: {
-          rule: 'Prenez 30 secondes de recul : observez, vérifiez le canal et signalez.',
-          steps: [
-            '1. Ne pas cliquer sur les liens ni ouvrir les pièces jointes.',
-            '2. Contacter le service émetteur par un canal téléphonique vérifié.',
-            '3. Cliquer sur le bouton Signaler VIGILO pour sécuriser l entreprise.',
-          ],
-        },
-        miniQuiz: {
-          question: `Quel est le premier réflexe de sécurité face à une demande suspecte de type ${scenarioType} ?`,
-          options: [
-            'Cliquer pour vérifier ce qui est demandé.',
-            'Survoler le lien sans cliquer et vérifier par téléphone si nécessaire.',
-            'Transférer le message à ses proches pour demander leur avis.',
-          ],
-          correctIndex: 1,
-          explanation: 'La vérification sans action active sur le message préserve l intégrité du poste et permet d identifier le leurre.',
-        },
-      };
+  async generateTraining(
+    scenarioType: ScenarioCategory,
+    vulnerabilityFocus: string
+  ): Promise<Partial<TrainingModule> & { _engine: string; _warning?: string }> {
+    const response = await apiFetch('/api/vigilo-ai/generate-training', {
+      method: 'POST',
+      body: JSON.stringify({ scenarioType, vulnerabilityFocus }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || `Erreur de génération IA (HTTP ${response.status})`);
     }
+    return {
+      ...data.data,
+      _engine: typeof data.engine === 'string' ? data.engine : 'vigilo-builtin',
+      _warning: typeof data.warning === 'string' ? data.warning : undefined,
+    } as Partial<TrainingModule> & { _engine: string; _warning?: string };
   },
 };
 
+export const vigiloCampaignService = {
+  async listCampaigns(): Promise<Campaign[]> {
+    const response = await apiFetch('/api/campaigns');
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !Array.isArray(data.data)) {
+      throw new Error(data.error || 'Impossible de charger les campagnes');
+    }
+    return data.data as Campaign[];
+  },
+
+  async createCampaign(campaign: Pick<
+    Campaign,
+    'name' | 'description' | 'scenarioId' | 'scenarioName' | 'category' |
+    'difficulty' | 'targetEmployeeIds' | 'isReTest' | 'baselineCampaignId'
+  > & {
+    launchImmediately?: boolean;
+    sendRealEmails?: boolean;
+    scenarioBody?: string;
+  }): Promise<Campaign> {
+    const response = await apiFetch('/api/campaigns', {
+      method: 'POST',
+      body: JSON.stringify(campaign),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Impossible de créer la campagne');
+    }
+    return data.data as Campaign;
+  },
+
+  async createDraft(campaign: Pick<
+    Campaign,
+    'name' | 'description' | 'scenarioId' | 'scenarioName' | 'category' |
+    'difficulty' | 'targetEmployeeIds' | 'isReTest' | 'baselineCampaignId'
+  >): Promise<Campaign> {
+    return this.createCampaign({ ...campaign, launchImmediately: false });
+  },
+
+  async launchCampaign(
+    campaignId: string,
+    options?: { sendRealEmails?: boolean; scenarioBody?: string }
+  ): Promise<{ campaign: Campaign; message: string; emailsSent: number }> {
+    const response = await apiFetch(`/api/campaigns/${encodeURIComponent(campaignId)}/launch`, {
+      method: 'POST',
+      body: JSON.stringify(options || {}),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Impossible de lancer la campagne');
+    }
+    return {
+      campaign: data.data as Campaign,
+      message: data.message || 'Campagne lancée avec succès',
+      emailsSent: Number(data.emailsSent) || 0,
+    };
+  },
+
+  async simulateCampaignEvent(
+    campaignId: string,
+    eventType: 'open' | 'click' | 'report' | 'auto_cohort'
+  ): Promise<Campaign> {
+    const response = await apiFetch(`/api/campaigns/${encodeURIComponent(campaignId)}/simulate-event`, {
+      method: 'POST',
+      body: JSON.stringify({ eventType }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Échec de la simulation d’événement');
+    }
+    return data.data as Campaign;
+  },
+
+  async completeCampaign(campaignId: string): Promise<Campaign> {
+    const response = await apiFetch(`/api/campaigns/${encodeURIComponent(campaignId)}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Impossible de clôturer la campagne');
+    }
+    return data.data as Campaign;
+  },
+
+  async sendLiveTest(
+    email: string,
+    scenario: Scenario,
+    origin?: string
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await apiFetch('/api/send-live-test', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        scenario,
+        origin: origin || window.location.origin,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Impossible d’envoyer le test live');
+    }
+    return {
+      success: true,
+      message: data.message || 'Email de test envoyé avec succès',
+    };
+  },
+};
 
 export const vigiloOrgService = {
   async getSummary(): Promise<OrgSummary> {
@@ -212,11 +243,41 @@ export const vigiloOrgService = {
     return data.data;
   },
 
+  async seedDemoDirectory(): Promise<{ departmentsCount: number; employeesCount: number }> {
+    const res = await apiFetch('/api/org/seed-demo', { method: 'POST', body: JSON.stringify({}) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible d’initialiser l’annuaire de démonstration');
+    return data.data;
+  },
+
   async listDepartments(): Promise<CompanyDepartment[]> {
     const res = await apiFetch('/api/org/departments');
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Impossible de charger les services');
     return data.data;
+  },
+
+  async getProfile(): Promise<Pick<
+    SimulationProviderSettings,
+    'provider' | 'companyName' | 'companyDomain' | 'industry' | 'country' | 'preferredLanguage' | 'trainingTone' | 'brandColor'
+  >> {
+    const res = await apiFetch('/api/org/profile');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de charger le profil entreprise');
+    return data.data;
+  },
+
+  async updateProfile(profile: Pick<
+    SimulationProviderSettings,
+    'provider' | 'companyName' | 'companyDomain' | 'industry' | 'country' | 'preferredLanguage' | 'trainingTone' | 'brandColor'
+  >) {
+    const res = await apiFetch('/api/org/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(profile),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Enregistrement du profil entreprise impossible');
+    return data.data as typeof profile;
   },
 
   async createDepartment(name: string): Promise<CompanyDepartment> {
@@ -273,24 +334,52 @@ export const vigiloOrgService = {
 // Backwards compatibility alias
 export const rodiumAiService = vigiloAiService;
 
+export const vigiloGophishService = {
+  async getCampaigns(): Promise<{ configured: boolean; campaigns: GophishCampaignSummary[] }> {
+    const response = await apiFetch('/api/integrations/gophish/campaigns');
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Impossible de contacter Gophish');
+    }
+    return data.data;
+  },
+};
+
 export const vigiloTrainingService = {
+  async getTrainingInvitation(token: string): Promise<{ module: TrainingModule; completed: boolean }> {
+    const response = await apiFetch(`/api/public/training-invitations/${encodeURIComponent(token)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Lien de formation invalide ou expiré');
+    }
+    return { module: data.data as TrainingModule, completed: Boolean(data.completed) };
+  },
+
+  async completeTrainingInvitation(token: string): Promise<void> {
+    const response = await apiFetch(
+      `/api/public/training-invitations/${encodeURIComponent(token)}/complete`,
+      { method: 'POST' }
+    );
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Impossible d’enregistrer la fin de formation');
+    }
+  },
+
   async sendTrainingInvite(params: {
     email: string;
     firstName: string;
     module: TrainingModule;
     origin: string;
   }): Promise<boolean> {
-    try {
-      const response = await apiFetch('/api/send-training-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      if (!response.ok) return false;
-      const data = await response.json();
-      return Boolean(data.success);
-    } catch {
-      return false;
+    const response = await apiFetch('/api/send-training-invite', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Échec de l’envoi de l’invitation');
     }
+    return true;
   },
 };

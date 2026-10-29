@@ -123,7 +123,7 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
         <div className={`px-6 py-4 border-b flex items-center justify-between shrink-0 ${header}`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-[var(--primary)]/15 border border-[var(--primary)]/35 text-[var(--primary)] flex items-center justify-center font-bold text-xs shrink-0">
-              LIVE
+              DÉMO
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -137,11 +137,11 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
                       : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                   }`}
                 >
-                  Mode Simulation
+                  Démo locale
                 </span>
               </div>
               <p className={`text-xs font-mono ${subtitleCls}`}>
-                Test de la réaction réelle du collaborateur sous pression
+                Aperçu interactif du scénario
               </p>
             </div>
           </div>
@@ -186,6 +186,18 @@ export const EmployeeSimulatorModal: React.FC<EmployeeSimulatorModalProps> = ({
               <X className="w-5 h-5" />
             </button>
           </div>
+        </div>
+
+        <div
+          role="status"
+          className={`flex items-center gap-2 px-6 py-2 text-xs ${
+            isDark
+              ? 'border-b border-emerald-500/20 bg-emerald-950/30 text-emerald-200'
+              : 'border-b border-emerald-200 bg-emerald-50 text-emerald-800'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4 shrink-0" />
+          <span>Démo locale uniquement : aucun email n’est envoyé et aucun résultat réel n’est enregistré.</span>
         </div>
 
         <div

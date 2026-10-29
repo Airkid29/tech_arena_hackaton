@@ -5,6 +5,7 @@ import { TrainingModule, ScenarioCategory, DifficultyLevel } from '../../types';
 interface EditTrainingModalProps {
   isOpen: boolean;
   module: TrainingModule | null;
+  generationWarning?: string;
   onClose: () => void;
   onSave: (updated: TrainingModule) => void;
 }
@@ -25,6 +26,7 @@ const DIFFICULTIES: DifficultyLevel[] = ['Facile', 'Moyen', 'Difficile'];
 export const EditTrainingModal: React.FC<EditTrainingModalProps> = ({
   isOpen,
   module,
+  generationWarning = '',
   onClose,
   onSave,
 }) => {
@@ -82,6 +84,11 @@ export const EditTrainingModal: React.FC<EditTrainingModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5 text-sm">
+          {generationWarning && (
+            <p role="status" className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+              {generationWarning}
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2 space-y-1.5">
               <label className="text-xs font-semibold text-[var(--foreground)]">Titre</label>

@@ -13,7 +13,7 @@ import {
 import { ReTestRecord, Campaign } from '../../types';
 
 interface ReTestViewProps {
-  retestRecord: ReTestRecord;
+  retestRecord: ReTestRecord | null;
   campaigns: Campaign[];
   onLaunchNewReTest: (campaign: Campaign) => void;
   onNavigateToCampaign: (campaignId: string) => void;
@@ -26,6 +26,39 @@ export const ReTestView: React.FC<ReTestViewProps> = ({
   onNavigateToCampaign,
 }) => {
   const eligibleCampaigns = campaigns.filter((c) => !c.isReTest);
+
+  if (!retestRecord) {
+    return (
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <RotateCcw className="w-5 h-5 text-[#fb923c]" />
+            <span>Re-test & Mesure de la rétention</span>
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Les comparaisons apparaîtront uniquement après des campagnes terminées avec des événements mesurés.
+          </p>
+        </div>
+        <div className="vigilo-card p-6 space-y-4">
+          <p className="text-sm text-slate-300">
+            Aucun résultat de re-test mesuré n&apos;est disponible. Les brouillons et les aperçus du simulateur ne sont pas des résultats réels.
+          </p>
+          {eligibleCampaigns.filter((campaign) => campaign.status === 'terminée').map((campaign) => (
+            <div key={campaign.id} className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+              <span className="text-sm text-white">{campaign.name}</span>
+              <button
+                type="button"
+                onClick={() => onLaunchNewReTest(campaign)}
+                className="text-xs font-semibold text-[#fb923c] hover:underline"
+              >
+                Créer un brouillon de re-test
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">

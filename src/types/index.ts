@@ -9,7 +9,7 @@ export type ScenarioCategory =
   | 'QR Code (Quishing)';
 export type DifficultyLevel = 'Facile' | 'Moyen' | 'Difficile';
 export type CampaignStatus = 'brouillon' | 'planifiée' | 'en_cours' | 'terminée';
-export type AppViewMode = 'landing' | 'app' | 'login';
+export type AppViewMode = 'landing' | 'app' | 'login' | 'training-invite';
 
 export type TrainingAssignmentStatus = 'envoyé' | 'complété';
 
@@ -120,6 +120,8 @@ export interface AIAnalysis {
   recommendations: string[];
   trainingAdvice: string;
   analyzedAt: string;
+  engine?: string;
+  warning?: string;
 }
 
 export interface Campaign {
@@ -271,8 +273,6 @@ export interface AdminPublic {
 
 export interface SimulationProviderSettings {
   provider: 'mock' | 'gophish';
-  gophishUrl: string;
-  gophishApiKey: string;
   mockMode: {
     interactivePreview: boolean;
     autoSimulateReplies: boolean;
@@ -280,6 +280,19 @@ export interface SimulationProviderSettings {
   };
   companyName: string;
   companyDomain: string;
-  companySize?: CompanySize;
-  services?: VigiloService[];
+  industry: string;
+  country: string;
+  preferredLanguage: 'fr' | 'en';
+  trainingTone: 'professionnel' | 'accessible' | 'direct';
+  brandColor: string;
+}
+
+export interface GophishCampaignSummary {
+  id: number;
+  name: string;
+  status: string;
+  targeted: number;
+  opened: number;
+  clicked: number;
+  reported: number;
 }

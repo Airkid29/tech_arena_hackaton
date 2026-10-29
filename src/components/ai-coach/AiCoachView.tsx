@@ -35,6 +35,7 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
     campaigns[0]?.id || ''
   );
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState('');
 
   const selectedCampaign =
     campaigns.find((c) => c.id === selectedCampaignId) || campaigns[0];
@@ -42,11 +43,12 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
   const handleRunAnalysis = async () => {
     if (!selectedCampaign) return;
     setIsAnalyzing(true);
+    setAnalysisError('');
     try {
       const result = await rodiumAiService.analyzeCampaign(selectedCampaign);
       onUpdateCampaignAnalysis(selectedCampaign.id, result);
     } catch (err) {
-      console.error('Erreur analyse RodiumAI', err);
+      setAnalysisError(err instanceof Error ? err.message : 'Analyse IA indisponible.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -63,14 +65,14 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
               <span className="w-2 h-2 rounded-full bg-[#f2620a] animate-pulse" />
               <span>Conseiller de résilience humaine</span>
               <span className="text-slate-600">·</span>
-              <span className="text-amber-400 font-bold">Powered by RodiumAI</span>
+              <span className="text-amber-400 font-bold">Gemini / RodiumAI</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
               
-              <span>Vigilo Cyber Coach by RodiumAI</span>
+              <span>Vigilo Cyber Coach</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Le moteur d'intelligence comportementale de VIGILO. Il intervient à 3 niveaux : Génération des leurres contextuels, Diagnostic des facteurs humains et Remédiation par micro-formation ciblée.
+              Le coach pédagogique contextualise les ateliers, analyse des résultats agrégés et recommande des formations adaptées.
             </p>
           </div>
 
@@ -133,10 +135,16 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
               className="vigilo-btn-orange px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-              <span>{isAnalyzing ? 'Analyse RodiumAI en cours...' : 'Relancer l\'analyse via RodiumAI'}</span>
+              <span>{isAnalyzing ? 'Analyse IA en cours...' : 'Relancer l\'analyse IA'}</span>
             </button>
           </div>
         </div>
+
+        {analysisError && (
+          <p role="alert" className="rounded-lg border border-red-500/40 bg-red-950/30 px-4 py-3 text-xs text-red-200">
+            {analysisError}
+          </p>
+        )}
 
         {selectedCampaign && selectedCampaign.aiAnalysis ? (
           <div className="space-y-6">
@@ -144,9 +152,12 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
             <div className="p-5 rounded-xl bg-[#f2620a]/10 border border-[#f2620a]/30 text-xs text-slate-200 leading-relaxed space-y-2">
               <div className="flex items-center gap-2 font-bold text-[#fb923c]">
                 <Zap className="w-4 h-4" />
-                <span>Diagnostic & Synthèse par RodiumAI :</span>
+                <span>Diagnostic & Synthèse · {selectedCampaign.aiAnalysis.engine || 'IA intégrée'} :</span>
               </div>
-              <p>{selectedCampaign.aiAnalysis.summary}</p>
+              <p>{selectedCampaign.aiAnalysis.executiveSummary}</p>
+              {selectedCampaign.aiAnalysis.warning && (
+                <p className="text-amber-300">{selectedCampaign.aiAnalysis.warning}</p>
+              )}
             </div>
 
             {/* Diagnostic Details Grid */}
@@ -158,7 +169,7 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
                   <span>Leviers Psychologiques Déclenchés</span>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
-                  {(selectedCampaign.aiAnalysis.keyVulnerabilities || []).map((v: string, i: number) => (
+                  {[selectedCampaign.aiAnalysis.vulnerabilityFactor].map((v, i) => (
                     <span key={i} className="px-3 py-1 rounded-full text-xs font-mono bg-rose-500/15 text-rose-300 border border-rose-500/30">
                       {v}
                     </span>
@@ -173,9 +184,9 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
                   <span>Cohortes à Risque Élevé</span>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
-                  {(selectedCampaign.aiAnalysis.vulnerableCohorts || []).map((c: string, i: number) => (
+                  {selectedCampaign.aiAnalysis.departmentVulnerabilities.map(({ department }, i) => (
                     <span key={i} className="px-3 py-1 rounded-full text-xs font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                      {c}
+                      {department}
                     </span>
                   ))}
                 </div>
@@ -183,7 +194,7 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
             </div>
 
             {/* Recommended Training */}
-            {selectedCampaign.aiAnalysis.recommendedTraining && (
+            {selectedCampaign.aiAnalysis.trainingAdvice && (
               <div className="p-6 rounded-xl bg-[var(--card)] border border-[var(--card-border)] space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-emerald-400 text-xs uppercase tracking-wider">
@@ -195,8 +206,8 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-900 border border-white/10">
                   <div>
-                    <h4 className="font-bold text-white text-sm">{selectedCampaign.aiAnalysis.recommendedTraining.title}</h4>
-                    <p className="text-xs text-slate-400 mt-1">{selectedCampaign.aiAnalysis.recommendedTraining.reasoning}</p>
+                    <h4 className="font-bold text-white text-sm">Micro-formation recommandée</h4>
+                    <p className="text-xs text-slate-400 mt-1">{selectedCampaign.aiAnalysis.trainingAdvice}</p>
                   </div>
 
                   <button
@@ -212,7 +223,7 @@ export const AiCoachView: React.FC<AiCoachViewProps> = ({
           </div>
         ) : (
           <div className="text-center py-12 text-slate-400 text-xs">
-            Aucune analyse RodiumAI disponible pour cette campagne. Cliquez sur "Relancer l'analyse via RodiumAI".
+            Aucune analyse disponible pour cette campagne. Relancez l’analyse IA pour obtenir une synthèse agrégée.
           </div>
         )}
       </div>

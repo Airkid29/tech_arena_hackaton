@@ -13,6 +13,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { Scenario, ScenarioCategory } from '../../types';
+import { vigiloCampaignService } from '../../services/api';
 
 interface ScenarioCatalogProps {
   scenarios: Scenario[];
@@ -33,32 +34,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
   const [testEmail, setTestEmail] = useState('');
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testSuccess, setTestSuccess] = useState<string | null>(null);
-
-  const handleSendTestEmail = async () => {
-    if (!testEmail || !activeScenario) return;
-    setIsSendingTest(true);
-    setTestSuccess(null);
-    try {
-      const origin = window.location.origin;
-      const res = await fetch('/api/send-live-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: testEmail, scenario: activeScenario, origin })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTestSuccess("✅ Email envoyé avec succès ! Consultez votre boîte de réception pour tester le workflow.");
-        setTestEmail('');
-      } else {
-        alert("Erreur lors de l'envoi : " + data.error);
-      }
-    } catch (err: any) {
-      console.error(err);
-      alert("Erreur réseau ou le serveur n'est pas à jour. Avez-vous redémarré 'npm run dev' ?");
-    } finally {
-      setIsSendingTest(false);
-    }
-  };
+  const [testError, setTestError] = useState<string | null>(null);
 
   const filteredScenarios = scenarios.filter((s) =>
     selectedCategory === 'all' ? true : s.category === selectedCategory
@@ -67,10 +43,21 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
   const activeScenario =
     scenarios.find((s) => s.id === selectedScenarioId) || filteredScenarios[0] || scenarios[0];
 
-  // Effacer le message de succès si on change de scénario
-  React.useEffect(() => {
+  const handleSendTestEmail = async () => {
+    if (!testEmail || !activeScenario) return;
+    setIsSendingTest(true);
     setTestSuccess(null);
-  }, [activeScenario]);
+    setTestError(null);
+    try {
+      const res = await vigiloCampaignService.sendLiveTest(testEmail.trim(), activeScenario);
+      setTestSuccess(res.message);
+      setTestEmail('');
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : 'Erreur lors de l’envoi de l’email');
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
 
   const categories = [
     { id: 'all', label: 'Tous les scénarios' },
@@ -88,10 +75,10 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
         <div>
           <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
             <FileCode2 className="w-5 h-5 text-[#fb923c]" />
-            <span>Catalogue des scénarios d'attaque contrôlée</span>
+            <span>Catalogue des scénarios pédagogiques</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Modèles de simulation testés conformes au cadre légal de sensibilisation des collaborateurs (Email & WhatsApp).
+            Explorez les scénarios d&apos;ingénierie sociale, testez-les en direct par email ou intégrez-les directement dans vos campagnes.
           </p>
         </div>
 
@@ -100,7 +87,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
           className="vigilo-btn-orange flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold shadow-md cursor-pointer self-start sm:self-auto"
         >
           <Sparkles className="w-4 h-4 text-white" />
-          <span>Générer avec RodiumAI (Coach IA)</span>
+          <span>Générer avec le Coach IA</span>
         </button>
       </div>
 
@@ -143,7 +130,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
                   </span>
                   <span
                     className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                      scen.difficulty === 'Élevé' || scen.difficulty === 'Difficile'
+                      scen.difficulty === 'Difficile'
                         ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                         : scen.difficulty === 'Moyen'
                         ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
@@ -175,7 +162,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
                   onClick={() => onSimulateScenario(activeScenario)}
                   className="vigilo-btn-secondary px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
                 >
-                  Aperçu live
+                  Aperçu de la simulation
                 </button>
                 <button
                   onClick={() => onOpenCreateCampaignWithScenario(activeScenario.id)}
@@ -186,16 +173,16 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
               </div>
             </div>
 
-            {/* Test Email Form */}
+            {/* Live Test Decoy Email Dispatch */}
             <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/40 space-y-3">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-bold text-indigo-200">Envoyer un vrai test (Live Demo)</span>
+                <span className="text-xs font-bold text-indigo-200">Envoyer un test réel par email (Live Demo Jury ANCy)</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input
                   type="email"
-                  placeholder="Votre adresse email (pour recevoir le leurre)"
+                  placeholder="Adresse email du jury ou testeur..."
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
                   className="flex-1 bg-slate-900 border border-white/10 text-slate-200 text-xs rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-indigo-500"
@@ -205,12 +192,17 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
                   disabled={isSendingTest || !testEmail}
                   className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs transition-colors cursor-pointer shrink-0"
                 >
-                  {isSendingTest ? 'Envoi en cours...' : 'Envoyer'}
+                  {isSendingTest ? 'Envoi en cours…' : 'Envoyer le leurre'}
                 </button>
               </div>
               {testSuccess && (
-                <div className="text-xs font-mono text-emerald-400">
+                <div role="status" className="text-xs font-mono text-emerald-400 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/30">
                   {testSuccess}
+                </div>
+              )}
+              {testError && (
+                <div role="alert" className="text-xs font-mono text-rose-400 bg-rose-950/30 p-2.5 rounded-lg border border-rose-500/30">
+                  {testError}
                 </div>
               )}
             </div>

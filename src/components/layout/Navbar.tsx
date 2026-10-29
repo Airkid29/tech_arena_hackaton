@@ -110,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-[var(--muted-foreground)]">Moteur:</span>
           <strong className="text-[var(--foreground)]">
-            {settings.provider === 'mock' ? 'Mock Engine' : 'Gophish API'}
+            {settings.provider === 'mock' ? 'Mock Engine' : 'Gophish · lecture seule'}
           </strong>
         </div>
 

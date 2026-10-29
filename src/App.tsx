@@ -12,7 +12,13 @@ import { TrainingView } from './components/training/TrainingView';
 import { InteractiveTrainingPlayer } from './components/training/InteractiveTrainingPlayer';
 import { EditTrainingModal } from './components/training/EditTrainingModal';
 import { AssignTrainingModal } from './components/training/AssignTrainingModal';
-import { vigiloTrainingService, vigiloAuthService, vigiloOrgService } from './services/api';
+import {
+  vigiloTrainingService,
+  vigiloAuthService,
+  vigiloOrgService,
+  vigiloCampaignService,
+  vigiloAiService,
+} from './services/api';
 import { ReTestView } from './components/retest/ReTestView';
 import { SettingsView } from './components/settings/SettingsView';
 import { FlashNewsView } from './components/flash-news/FlashNewsView';
@@ -21,10 +27,8 @@ import { LandingPage } from './components/landing/LandingPage';
 import { AdminLogin } from './components/auth/AdminLogin';
 import { DirectoryView } from './components/directory/DirectoryView';
 import {
-  INITIAL_CAMPAIGNS,
   INITIAL_SCENARIOS,
   INITIAL_TRAININGS,
-  INITIAL_RETEST_RECORD,
   INITIAL_SETTINGS,
   INITIAL_FLASH_ARTICLES,
 } from './data/mockData';
@@ -32,7 +36,6 @@ import {
   Campaign,
   Scenario,
   TrainingModule,
-  ReTestRecord,
   SimulationProviderSettings,
   AIAnalysis,
   AppViewMode,
@@ -43,12 +46,26 @@ import {
 } from './types';
 import { Language } from './i18n/translations';
 
+type PublicTrainingState =
+  | { status: 'loading' }
+  | { status: 'ready'; token: string; module: TrainingModule; completed: boolean }
+  | { status: 'error'; message: string };
+
 export default function App() {
-  const [viewMode, setViewMode] = useState<AppViewMode>('landing');
+  const hasTrainingInvitation =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('trainingInvite');
+  const [viewMode, setViewMode] = useState<AppViewMode>(
+    hasTrainingInvitation ? 'training-invite' : 'landing'
+  );
+  const [publicTraining, setPublicTraining] = useState<PublicTrainingState | null>(
+    hasTrainingInvitation ? { status: 'loading' } : null
+  );
   const [admin, setAdmin] = useState<AdminPublic | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [orgDepartments, setOrgDepartments] = useState<CompanyDepartment[]>([]);
+  const [companyProfileLoaded, setCompanyProfileLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
 
@@ -82,12 +99,13 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+    const hasInvitation = new URLSearchParams(window.location.search).has('trainingInvite');
     (async () => {
       try {
         const me = await vigiloAuthService.me();
         if (!cancelled) {
           setAdmin(me);
-          if (me) setViewMode('app');
+          if (me && !hasInvitation) setViewMode('app');
         }
       } catch {
         // réseau / JSON : rester déconnecté
@@ -99,45 +117,81 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('trainingInvite');
+    if (!token) return;
+
+    let cancelled = false;
+    setViewMode('training-invite');
+    setPublicTraining({ status: 'loading' });
+    window.history.replaceState({}, document.title, window.location.pathname);
+    void vigiloTrainingService.getTrainingInvitation(token).then(
+      ({ module, completed }) => {
+        if (!cancelled) setPublicTraining({ status: 'ready', token, module, completed });
+      },
+      (error: unknown) => {
+        if (!cancelled) {
+          setPublicTraining({
+            status: 'error',
+            message: error instanceof Error ? error.message : 'Impossible de charger cette formation.',
+          });
+        }
+      }
+    );
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
     if (viewMode === 'app' && !admin && !authChecking) {
       setViewMode('login');
     }
   }, [viewMode, admin, authChecking]);
 
+  const fetchOrgDirectory = async () => {
+    try {
+      const [depts, orgEmps] = await Promise.all([
+        vigiloOrgService.listDepartments(),
+        vigiloOrgService.listEmployees(),
+      ]);
+      setOrgDepartments(depts);
+      setEmployees((prev) => {
+        const prevById = new Map(prev.map((e) => [e.id, e]));
+        return orgEmps.map((emp) => {
+          const dept = depts.find((d) => d.id === emp.departmentId);
+          const p = prevById.get(emp.id);
+          return {
+            id: emp.id,
+            firstName: emp.firstName,
+            lastName: emp.lastName,
+            email: emp.email,
+            department: dept?.name || '—',
+            departmentId: emp.departmentId,
+            role: emp.role,
+            riskScore: emp.riskScore,
+            trainingAssignments: p?.trainingAssignments,
+          };
+        });
+      });
+    } catch {
+      // Directory shows error when opened
+    }
+  };
+
   // Prefetch org employees after login (Directory refreshes again on enter)
   useEffect(() => {
     if (!admin) return;
     let cancelled = false;
-    (async () => {
-      try {
-        const [depts, orgEmps] = await Promise.all([
-          vigiloOrgService.listDepartments(),
-          vigiloOrgService.listEmployees(),
-        ]);
-        if (cancelled) return;
-        setOrgDepartments(depts);
-        setEmployees((prev) => {
-          const prevById = new Map(prev.map((e) => [e.id, e]));
-          return orgEmps.map((emp) => {
-            const dept = depts.find((d) => d.id === emp.departmentId);
-            const p = prevById.get(emp.id);
-            return {
-              id: emp.id,
-              firstName: emp.firstName,
-              lastName: emp.lastName,
-              email: emp.email,
-              department: dept?.name || '—',
-              departmentId: emp.departmentId,
-              role: emp.role,
-              riskScore: emp.riskScore,
-              trainingAssignments: p?.trainingAssignments,
-            };
-          });
-        });
-      } catch {
-        // Directory shows error when opened
+    void fetchOrgDirectory();
+    void vigiloOrgService.getProfile().then(
+      (profile) => {
+        if (!cancelled) setSettings((current) => ({ ...current, ...profile }));
+      },
+      (error: unknown) => {
+        console.error('Impossible de charger le profil entreprise:', error);
       }
-    })();
+    ).finally(() => {
+      if (!cancelled) setCompanyProfileLoaded(true);
+    });
     return () => { cancelled = true; };
   }, [admin?.id]);
 
@@ -150,16 +204,71 @@ export default function App() {
     setAdmin(null);
     setEmployees([]);
     setOrgDepartments([]);
+    setCampaigns([]);
+    setTrainingToEdit(null);
+    setTrainingToAssign(null);
+    setCampaignTrainingTargetIds([]);
+    setPendingCampaignTrainingTargetIds(null);
+    setScenarios(INITIAL_SCENARIOS);
+    setTrainings(INITIAL_TRAININGS.map((training) => ({
+      ...training,
+      completedCount: 0,
+      totalAssigned: 0,
+    })));
+    setFlashArticles(INITIAL_FLASH_ARTICLES.map((article) => ({
+      ...article,
+      readCount: 0,
+      totalRecipients: 0,
+      readRate: 0,
+    })));
+    setSettings(INITIAL_SETTINGS);
+    setCompanyProfileLoaded(false);
     setViewMode('landing');
   };
 
   // Core Data
-  const [campaigns, setCampaigns] = useState<Campaign[]>(INITIAL_CAMPAIGNS);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignLoadError, setCampaignLoadError] = useState('');
   const [scenarios, setScenarios] = useState<Scenario[]>(INITIAL_SCENARIOS);
-  const [trainings, setTrainings] = useState<TrainingModule[]>(INITIAL_TRAININGS);
-  const [retestRecord, setRetestRecord] = useState<ReTestRecord>(INITIAL_RETEST_RECORD);
+  const [trainings, setTrainings] = useState<TrainingModule[]>(
+    INITIAL_TRAININGS.map((training) => ({ ...training, completedCount: 0, totalAssigned: 0 }))
+  );
   const [settings, setSettings] = useState<SimulationProviderSettings>(INITIAL_SETTINGS);
-  const [flashArticles, setFlashArticles] = useState<FlashArticle[]>(INITIAL_FLASH_ARTICLES);
+  const [flashArticles, setFlashArticles] = useState<FlashArticle[]>(
+    INITIAL_FLASH_ARTICLES.map((article) => ({
+      ...article,
+      readCount: 0,
+      totalRecipients: 0,
+      readRate: 0,
+    }))
+  );
+
+  useEffect(() => {
+    if (!admin) {
+      setCampaigns([]);
+      setCampaignLoadError('');
+      return;
+    }
+    let cancelled = false;
+    setCampaignLoadError('');
+    void vigiloCampaignService.listCampaigns().then(
+      (loadedCampaigns) => {
+        if (!cancelled) setCampaigns(loadedCampaigns);
+      },
+      (error: unknown) => {
+        if (!cancelled) {
+          console.error('Impossible de charger les campagnes:', error);
+          setCampaigns([]);
+          setCampaignLoadError('Impossible de charger les campagnes depuis le serveur. Réessayez après avoir vérifié la connexion.');
+        }
+      }
+    );
+    return () => { cancelled = true; };
+  }, [admin?.id]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--primary', settings.brandColor);
+  }, [settings.brandColor]);
 
   // Modals & Sub-flows
   const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
@@ -176,6 +285,11 @@ export default function App() {
   const [activeInteractiveTraining, setActiveInteractiveTraining] = useState<TrainingModule | null>(null);
   const [trainingToEdit, setTrainingToEdit] = useState<TrainingModule | null>(null);
   const [trainingToAssign, setTrainingToAssign] = useState<TrainingModule | null>(null);
+  const [campaignTrainingTargetIds, setCampaignTrainingTargetIds] = useState<string[]>([]);
+  const [pendingCampaignTrainingTargetIds, setPendingCampaignTrainingTargetIds] = useState<string[] | null>(null);
+  const [trainingGenerationError, setTrainingGenerationError] = useState('');
+  const [trainingGenerationWarning, setTrainingGenerationWarning] = useState('');
+  const [isGeneratingTraining, setIsGeneratingTraining] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Magic Link Trap Check
@@ -193,10 +307,16 @@ export default function App() {
     }
     if (params.get('trap') === 'true') {
       const scenId = params.get('scenarioId');
+      const campId = params.get('campaignId');
       const scen = INITIAL_SCENARIOS.find(s => s.id === scenId || s.category === scenId) || INITIAL_SCENARIOS[0];
       setSimulatedScenario(scen);
       setSimulatorInitialViewState('landing_page_clicked');
       setIsEmployeeSimulatorOpen(true);
+      if (campId) {
+        void vigiloCampaignService.simulateCampaignEvent(campId, 'click').then((updated) => {
+          setCampaigns((prev) => prev.map((c) => (c.id === campId ? updated : c)));
+        }).catch(() => {});
+      }
       // Clean URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -206,54 +326,43 @@ export default function App() {
   const currentDetailCampaign = campaigns.find((c) => c.id === selectedCampaignId);
 
   // Handlers for Campaign Management
-  const handleCreateCampaign = (newCampaignData: Partial<Campaign>) => {
-    const created: Campaign = {
-      ...newCampaignData,
-    } as Campaign;
-
-    setCampaigns((prev) => [created, ...prev]);
-
-    // If it was a re-test, update the retestRecord
-    if (newCampaignData.isReTest && newCampaignData.baselineCampaignId) {
-      const base = campaigns.find((c) => c.id === newCampaignData.baselineCampaignId);
-      if (base) {
-        setRetestRecord({
-          id: `retest-${Date.now()}`,
-          title: `Évolution : ${base.name} (Post-Formation)`,
-          scenarioCategory: created.category,
-          targetCohort: created.targetGroup,
-          baselineCampaign: {
-            id: base.id,
-            name: base.name,
-            date: 'Précédente',
-            targeted: base.targeted,
-            clickRate: base.clickRate,
-            reportRate: base.reportRate,
-            clicked: base.clicked,
-            reported: base.reported,
-          },
-          retestCampaign: {
-            id: created.id,
-            name: created.name,
-            date: 'Aujourd hui',
-            targeted: created.targeted,
-            clickRate: created.clickRate,
-            reportRate: created.reportRate,
-            clicked: created.clicked,
-            reported: created.reported,
-          },
-          evolution: {
-            clickRateDropPercent: -Math.round(((base.clickRate - created.clickRate) / (base.clickRate || 1)) * 100),
-            reportRateGainPercent: Math.round(((created.reportRate - base.reportRate) / (base.reportRate || 1)) * 100),
-            humanVigilanceScore: 88,
-          },
-        });
-      }
-    }
-
+  const handleCreateCampaign = async (newCampaignData: Pick<
+    Campaign,
+    'name' | 'description' | 'scenarioId' | 'scenarioName' | 'category' |
+    'difficulty' | 'targetEmployeeIds' | 'isReTest' | 'baselineCampaignId'
+  > & {
+    launchImmediately?: boolean;
+    sendRealEmails?: boolean;
+    scenarioBody?: string;
+  }) => {
+    const created = await vigiloCampaignService.createCampaign(newCampaignData);
+    setCampaignLoadError('');
+    setCampaigns((prev) => [created, ...prev.filter((campaign) => campaign.id !== created.id)]);
     setSelectedCampaignId(created.id);
     setActiveTab('campaigns');
     setViewMode('app');
+    return created;
+  };
+
+  const handleLaunchCampaign = async (
+    campaign: Campaign,
+    options?: { sendRealEmails?: boolean; scenarioBody?: string }
+  ) => {
+    const res = await vigiloCampaignService.launchCampaign(campaign.id, options);
+    setCampaigns((prev) => prev.map((c) => (c.id === campaign.id ? res.campaign : c)));
+  };
+
+  const handleSimulateCampaignEvent = async (
+    campaignId: string,
+    eventType: 'open' | 'click' | 'report' | 'auto_cohort'
+  ) => {
+    const updated = await vigiloCampaignService.simulateCampaignEvent(campaignId, eventType);
+    setCampaigns((prev) => prev.map((c) => (c.id === campaignId ? updated : c)));
+  };
+
+  const handleCompleteCampaign = async (campaignId: string) => {
+    const updated = await vigiloCampaignService.completeCampaign(campaignId);
+    setCampaigns((prev) => prev.map((c) => (c.id === campaignId ? updated : c)));
   };
 
   const handleUpdateCampaignAnalysis = (campaignId: string, analysis: AIAnalysis) => {
@@ -276,12 +385,63 @@ export default function App() {
     setIsCreateCampaignOpen(true);
   };
 
-  const handleGenerateTrainingForCampaign = (campaign: Campaign) => {
-    const existing = trainings.find((t) => t.category === campaign.category);
-    if (existing) {
-      setActiveInteractiveTraining(existing);
-    } else {
-      setActiveInteractiveTraining(trainings[0]);
+  const handleGenerateTrainingForCampaign = async (campaign: Campaign) => {
+    setIsGeneratingTraining(true);
+    setTrainingGenerationError('');
+    setTrainingGenerationWarning('');
+    try {
+      const generated = await vigiloAiService.generateTraining(campaign.category, campaign.description);
+      const { _engine, _warning, ...trainingContent } = generated;
+      const base = INITIAL_TRAININGS.find((training) => training.category === campaign.category) || INITIAL_TRAININGS[0];
+      const module: TrainingModule = {
+        ...base,
+        ...trainingContent,
+        id: `generated-${Date.now()}`,
+        title: typeof trainingContent.title === 'string' ? trainingContent.title : base.title,
+        category: campaign.category,
+        difficulty: campaign.difficulty,
+        targetAudience: campaign.targetGroup,
+        durationMinutes: Number(trainingContent.durationMinutes) || base.durationMinutes,
+        completedCount: 0,
+        totalAssigned: 0,
+        campaignId: campaign.id,
+        situation: trainingContent.situation || base.situation,
+        warningSigns: trainingContent.warningSigns || base.warningSigns,
+        correctReaction: trainingContent.correctReaction || base.correctReaction,
+        miniQuiz: trainingContent.miniQuiz || base.miniQuiz,
+      };
+      setTrainings((previous) => [module, ...previous]);
+      setTrainingToEdit(module);
+      setTrainingGenerationWarning(
+        `${_warning ? `${_warning} ` : ''}Source : ${_engine}. Relisez le module avant toute attribution.`
+      );
+    } catch (error) {
+      setPendingCampaignTrainingTargetIds(null);
+      setTrainingGenerationError(
+        error instanceof Error ? error.message : 'La génération de formation IA a échoué.'
+      );
+    } finally {
+      setIsGeneratingTraining(false);
+    }
+  };
+
+  const handlePrepareCampaignTrainingInvite = async (campaign: Campaign) => {
+    const targetIds = campaign.targetEmployeeIds || [];
+    if (targetIds.length === 0) {
+      setPendingCampaignTrainingTargetIds(null);
+      setTrainingGenerationError('Cette campagne ne contient aucun collaborateur sélectionné dans l’annuaire.');
+      return;
+    }
+    setPendingCampaignTrainingTargetIds(targetIds);
+    await handleGenerateTrainingForCampaign(campaign);
+  };
+
+  const handleSaveTraining = (updated: TrainingModule) => {
+    handleUpdateTraining(updated);
+    if (pendingCampaignTrainingTargetIds) {
+      setCampaignTrainingTargetIds(pendingCampaignTrainingTargetIds);
+      setPendingCampaignTrainingTargetIds(null);
+      setTrainingToAssign(updated);
     }
   };
 
@@ -305,40 +465,6 @@ export default function App() {
     setSimulatedScenario(scen || null);
     setSimulatorInitialViewState('inbox');
     setIsEmployeeSimulatorOpen(true);
-  };
-
-  const handleEmployeeClickedTrap = (campaignId: string) => {
-    setCampaigns((prev) =>
-      prev.map((camp) => {
-        if (camp.id === campaignId) {
-          const newClicked = camp.clicked + 1;
-          const newClickRate = Number(((newClicked / camp.targeted) * 100).toFixed(1));
-          return {
-            ...camp,
-            clicked: newClicked,
-            clickRate: newClickRate,
-          };
-        }
-        return camp;
-      })
-    );
-  };
-
-  const handleEmployeeReportedPhish = (campaignId: string) => {
-    setCampaigns((prev) =>
-      prev.map((camp) => {
-        if (camp.id === campaignId) {
-          const newReported = camp.reported + 1;
-          const newReportRate = Number(((newReported / camp.targeted) * 100).toFixed(1));
-          return {
-            ...camp,
-            reported: newReported,
-            reportRate: newReportRate,
-          };
-        }
-        return camp;
-      })
-    );
   };
 
   // Precise routing from simulation trap click to targeted training module
@@ -397,77 +523,90 @@ export default function App() {
     moduleId: string,
     employeeIds: string[],
     channel: 'Email' | 'WhatsApp'
-  ): Promise<{ success: boolean; sentCount: number }> => {
+  ): Promise<{ success: boolean; sentCount: number; error?: string }> => {
     const mod = trainings.find((t) => t.id === moduleId);
     if (!mod || employeeIds.length === 0) {
       return { success: false, sentCount: 0 };
     }
 
     const targets = employees.filter((e) => employeeIds.includes(e.id));
+    if (channel !== 'Email') {
+      return {
+        success: false,
+        sentCount: 0,
+        error: 'Le canal WhatsApp n’est pas connecté. Aucune invitation n’a été envoyée.',
+      };
+    }
     const origin = window.location.origin;
     const assignedAt = new Date().toISOString();
+    const sentEmployees: Employee[] = [];
+    let sendError = '';
 
     for (const emp of targets) {
-      if (channel === 'Email') {
-        await vigiloTrainingService.sendTrainingInvite({
+      try {
+        const sent = await vigiloTrainingService.sendTrainingInvite({
           email: emp.email,
           firstName: emp.firstName,
           module: mod,
           origin,
         });
+        if (!sent) throw new Error('Le serveur n’a pas confirmé l’envoi.');
+        sentEmployees.push(emp);
+      } catch (error) {
+        sendError = error instanceof Error ? error.message : 'Échec de l’envoi email.';
+        break;
       }
     }
 
-    setTrainings((prev) =>
-      prev.map((t) =>
-        t.id === moduleId ? { ...t, totalAssigned: t.totalAssigned + targets.length } : t
-      )
-    );
+    if (sentEmployees.length > 0) {
+      setTrainings((prev) =>
+        prev.map((t) =>
+          t.id === moduleId ? { ...t, totalAssigned: t.totalAssigned + sentEmployees.length } : t
+        )
+      );
 
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (!employeeIds.includes(emp.id)) return emp;
-        const entry = {
-          moduleId: mod.id,
-          moduleTitle: mod.title,
-          assignedAt,
-          channel,
-          status: 'envoyé' as const,
-        };
-        return {
-          ...emp,
-          trainingAssignments: [...(emp.trainingAssignments || []), entry],
-        };
-      })
-    );
+      const sentIds = new Set(sentEmployees.map((employee) => employee.id));
+      setEmployees((prev) =>
+        prev.map((emp) => {
+          if (!sentIds.has(emp.id)) return emp;
+          const entry = {
+            moduleId: mod.id,
+            moduleTitle: mod.title,
+            assignedAt,
+            channel,
+            status: 'envoyé' as const,
+          };
+          return {
+            ...emp,
+            trainingAssignments: [...(emp.trainingAssignments || []), entry],
+          };
+        })
+      );
+    }
 
-    return { success: true, sentCount: targets.length };
+    if (sendError) {
+      return {
+        success: false,
+        sentCount: sentEmployees.length,
+        error: sentEmployees.length
+          ? `${sentEmployees.length} invitation(s) envoyée(s), puis arrêt après un échec : ${sendError}`
+          : sendError,
+      };
+    }
+    return { success: sentEmployees.length > 0, sentCount: sentEmployees.length };
   };
 
   // Flash News Handlers
-  const handleBroadcastFlashArticle = (articleId: string) => {
-    setFlashArticles((prev) =>
-      prev.map((art) =>
-        art.id === articleId
-          ? {
-              ...art,
-              readCount: Math.min(art.totalRecipients, art.readCount + 2),
-              readRate: Number((((art.readCount + 2) / art.totalRecipients) * 100).toFixed(1)),
-            }
-          : art
-      )
-    );
-  };
-
   const handleCreateFlashArticle = (
-    newArt: Omit<FlashArticle, 'id' | 'publishedAt' | 'readCount' | 'readRate'>
+    newArt: Omit<FlashArticle, 'id' | 'publishedAt' | 'readCount' | 'readRate' | 'totalRecipients'>
   ) => {
     const created: FlashArticle = {
       ...newArt,
       id: `flash-${Date.now()}`,
       publishedAt: new Date().toISOString().split('T')[0],
-      readCount: 1,
-      readRate: 3.1,
+      readCount: 0,
+      readRate: 0,
+      totalRecipients: 0,
     };
     setFlashArticles((prev) => [created, ...prev]);
   };
@@ -475,11 +614,56 @@ export default function App() {
   const activeCampaignCount = campaigns.filter((c) => c.status === 'en_cours').length;
   const isDark = theme === 'dark';
 
-  if (authChecking) {
+  if (authChecking && viewMode !== 'training-invite') {
     return (
       <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
         <div className="min-h-screen flex items-center justify-center bg-[var(--background)] text-[var(--muted-foreground)] text-sm">
           Vérification de session…
+        </div>
+      </div>
+    );
+  }
+
+  if (viewMode === 'training-invite') {
+    const leaveTraining = () => {
+      setPublicTraining(null);
+      setViewMode('landing');
+    };
+
+    return (
+      <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)] text-[var(--foreground)] p-4">
+          {publicTraining?.status === 'loading' && (
+            <p className="text-sm text-[var(--muted-foreground)]">Chargement de la micro-formation…</p>
+          )}
+          {publicTraining?.status === 'error' && (
+            <div className="max-w-md space-y-4 text-center">
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400">{publicTraining.message}</p>
+              <button type="button" onClick={leaveTraining} className="vigilo-btn-secondary px-4 py-2 rounded-lg text-sm">
+                Retour à VIGILO
+              </button>
+            </div>
+          )}
+          {publicTraining?.status === 'ready' && publicTraining.completed && (
+            <div className="max-w-md space-y-4 text-center">
+              <h1 className="text-lg font-bold">Formation déjà complétée</h1>
+              <p className="text-sm text-[var(--muted-foreground)]">{publicTraining.module.title}</p>
+              <button type="button" onClick={leaveTraining} className="vigilo-btn-secondary px-4 py-2 rounded-lg text-sm">
+                Retour à VIGILO
+              </button>
+            </div>
+          )}
+          {publicTraining?.status === 'ready' && !publicTraining.completed && (
+            <InteractiveTrainingPlayer
+              module={publicTraining.module}
+              onClose={leaveTraining}
+              onComplete={() => vigiloTrainingService.completeTrainingInvitation(publicTraining.token)}
+              onNavigateToReTest={() => {
+                setPublicTraining(null);
+                setViewMode('login');
+              }}
+            />
+          )}
         </div>
       </div>
     );
@@ -512,8 +696,8 @@ export default function App() {
           onClose={() => setIsEmployeeSimulatorOpen(false)}
           campaign={simulatedCampaign}
           scenario={simulatedScenario}
-          onEmployeeClickedTrap={handleEmployeeClickedTrap}
-          onEmployeeReportedPhish={handleEmployeeReportedPhish}
+          onEmployeeClickedTrap={() => undefined}
+          onEmployeeReportedPhish={() => undefined}
           onStartTrainingFromTrap={handleStartTrainingFromTrap}
           initialViewState={simulatorInitialViewState}
           isDark={isDark}
@@ -541,6 +725,20 @@ export default function App() {
       <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
         <AdminLogin
           onLogin={(a) => {
+            setCampaigns([]);
+            setCampaignLoadError('');
+            setScenarios(INITIAL_SCENARIOS);
+            setTrainings(INITIAL_TRAININGS.map((training) => ({
+              ...training,
+              completedCount: 0,
+              totalAssigned: 0,
+            })));
+            setFlashArticles(INITIAL_FLASH_ARTICLES.map((article) => ({
+              ...article,
+              readCount: 0,
+              totalRecipients: 0,
+              readRate: 0,
+            })));
             setAdmin(a);
             setSettings((prev) => ({
               ...prev,
@@ -595,10 +793,14 @@ export default function App() {
         />
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 md:p-8 min-w-0 w-full">
+          {campaignLoadError && (
+            <p role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+              {campaignLoadError}
+            </p>
+          )}
           {activeTab === 'overview' && (
             <OverviewTab
               campaigns={campaigns}
-              retestRecord={retestRecord}
               onSelectCampaign={(id) => {
                 setSelectedCampaignId(id);
                 setActiveTab('campaigns');
@@ -620,8 +822,13 @@ export default function App() {
                   onBack={() => setSelectedCampaignId(null)}
                   onUpdateCampaignAnalysis={handleUpdateCampaignAnalysis}
                   onLaunchReTest={handleLaunchReTest}
-                  onGenerateTraining={handleGenerateTrainingForCampaign}
+                  onPrepareTrainingInvite={handlePrepareCampaignTrainingInvite}
+                  isGeneratingTraining={isGeneratingTraining}
+                  trainingGenerationError={trainingGenerationError}
                   onSimulate={(camp) => handleOpenSimulator(camp)}
+                  onLaunchCampaign={handleLaunchCampaign}
+                  onSimulateEvent={handleSimulateCampaignEvent}
+                  onCompleteCampaign={handleCompleteCampaign}
                 />
               ) : (
                 <CampaignList
@@ -629,6 +836,7 @@ export default function App() {
                   onSelectCampaign={(id) => setSelectedCampaignId(id)}
                   onOpenCreateModal={() => handleOpenCreateCampaignModal()}
                   onSimulateCampaign={(camp) => handleOpenSimulator(camp)}
+                  onLaunchCampaign={handleLaunchCampaign}
                 />
               )}
             </>
@@ -675,7 +883,6 @@ export default function App() {
           {activeTab === 'flash-news' && (
             <FlashNewsView
               articles={flashArticles}
-              onBroadcastArticle={handleBroadcastFlashArticle}
               onCreateArticle={handleCreateFlashArticle}
               isDark={isDark}
             />
@@ -683,7 +890,7 @@ export default function App() {
 
           {activeTab === 'retest' && (
             <ReTestView
-              retestRecord={retestRecord}
+              retestRecord={null}
               campaigns={campaigns}
               onLaunchNewReTest={handleLaunchReTest}
               onNavigateToCampaign={(id) => {
@@ -696,7 +903,11 @@ export default function App() {
           {activeTab === 'settings' && (
             <SettingsView
               settings={settings}
-              onUpdateSettings={(newSettings) => setSettings(newSettings)}
+              isProfileLoading={!companyProfileLoaded}
+              onUpdateSettings={async (newSettings) => {
+                const profile = await vigiloOrgService.updateProfile(newSettings);
+                setSettings((current) => ({ ...current, ...newSettings, ...profile }));
+              }}
             />
           )}
         </main>
@@ -714,12 +925,17 @@ export default function App() {
         preselectedScenarioId={createCampaignScenarioId}
         isReTestMode={isReTestCreateMode}
         baselineCampaign={reTestBaselineCampaign}
+        onSeedDemoDirectory={async () => {
+          await vigiloOrgService.seedDemoDirectory();
+          await fetchOrgDirectory();
+        }}
       />
 
       {/* 2. Generate Scenario Modal with Vigilo Coach */}
       <GenerateScenarioModal
         isOpen={isGenerateScenarioOpen}
         onClose={() => setIsGenerateScenarioOpen(false)}
+        companyProfile={settings}
         onScenarioGenerated={(newScen) => {
           setScenarios((prev) => [newScen, ...prev]);
         }}
@@ -731,8 +947,8 @@ export default function App() {
         onClose={() => setIsEmployeeSimulatorOpen(false)}
         campaign={simulatedCampaign}
         scenario={simulatedScenario}
-        onEmployeeClickedTrap={handleEmployeeClickedTrap}
-        onEmployeeReportedPhish={handleEmployeeReportedPhish}
+        onEmployeeClickedTrap={() => undefined}
+        onEmployeeReportedPhish={() => undefined}
         onStartTrainingFromTrap={handleStartTrainingFromTrap}
         initialViewState={simulatorInitialViewState}
         isDark={isDark}
@@ -741,15 +957,24 @@ export default function App() {
       <EditTrainingModal
         isOpen={Boolean(trainingToEdit)}
         module={trainingToEdit}
-        onClose={() => setTrainingToEdit(null)}
-        onSave={handleUpdateTraining}
+        generationWarning={trainingGenerationWarning}
+        onClose={() => {
+          setTrainingToEdit(null);
+          setTrainingGenerationWarning('');
+          setPendingCampaignTrainingTargetIds(null);
+        }}
+        onSave={handleSaveTraining}
       />
 
       <AssignTrainingModal
         isOpen={Boolean(trainingToAssign)}
         module={trainingToAssign}
         employees={employees}
-        onClose={() => setTrainingToAssign(null)}
+        initialEmployeeIds={campaignTrainingTargetIds}
+        onClose={() => {
+          setTrainingToAssign(null);
+          setCampaignTrainingTargetIds([]);
+        }}
         onAssign={handleAssignTraining}
       />
 

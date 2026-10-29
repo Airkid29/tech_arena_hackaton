@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   X,
   Send,
@@ -15,18 +15,20 @@ interface AssignTrainingModalProps {
   isOpen: boolean;
   module: TrainingModule | null;
   employees: Employee[];
+  initialEmployeeIds?: string[];
   onClose: () => void;
   onAssign: (
     moduleId: string,
     employeeIds: string[],
     channel: 'Email' | 'WhatsApp'
-  ) => Promise<{ success: boolean; sentCount: number }>;
+  ) => Promise<{ success: boolean; sentCount: number; error?: string }>;
 }
 
 export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
   isOpen,
   module,
   employees,
+  initialEmployeeIds = [],
   onClose,
   onAssign,
 }) => {
@@ -34,7 +36,16 @@ export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [channel, setChannel] = useState<'Email' | 'WhatsApp'>('Email');
   const [sending, setSending] = useState(false);
-  const [done, setDone] = useState<{ count: number } | null>(null);
+  const [done, setDone] = useState<{ count: number; error?: string } | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !module) return;
+    const availableIds = new Set(employees.map((employee) => employee.id));
+    setSelectedIds(new Set(initialEmployeeIds.filter((id) => availableIds.has(id))));
+    setDone(null);
+    setSendError(null);
+  }, [isOpen, module?.id]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -67,11 +78,18 @@ export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
   const handleSend = async () => {
     if (selectedIds.size === 0) return;
     setSending(true);
+    setSendError(null);
     try {
       const result = await onAssign(module.id, Array.from(selectedIds), channel);
       if (result.success) {
         setDone({ count: result.sentCount });
+      } else if (result.sentCount > 0) {
+        setDone({ count: result.sentCount, error: result.error });
+      } else {
+        setSendError(result.error || 'Aucune invitation n’a été envoyée.');
       }
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : 'L’invitation n’a pas pu être envoyée.');
     } finally {
       setSending(false);
     }
@@ -107,12 +125,17 @@ export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
         {done ? (
           <div className="p-10 text-center space-y-4">
             <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto" />
-            <h3 className="text-lg font-bold text-[var(--foreground)]">Formation dispatchée</h3>
+            <h3 className="text-lg font-bold text-[var(--foreground)]">
+              {done.error ? 'Envoi partiel' : 'Invitation envoyée'}
+            </h3>
             <p className="text-sm text-[var(--muted-foreground)] max-w-md mx-auto">
               Lien micro-formation ({module.durationMinutes} min) envoyé à{' '}
               <strong className="text-[var(--foreground)]">{done.count}</strong> collaborateur(s) via{' '}
-              {channel === 'Email' ? 'email' : 'WhatsApp'}.
+              email.
             </p>
+            {done.error && (
+              <p role="alert" className="text-xs text-amber-600 dark:text-amber-300">{done.error}</p>
+            )}
             <button type="button" onClick={handleClose} className="vigilo-btn-orange px-6 py-2.5 rounded-lg text-sm font-bold text-white cursor-pointer">
               Fermer
             </button>
@@ -136,17 +159,19 @@ export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setChannel('WhatsApp')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border cursor-pointer ${
-                    channel === 'WhatsApp'
-                      ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
-                      : 'vigilo-btn-secondary'
-                  }`}
+                  disabled
+                  title="L’intégration WhatsApp Business n’est pas encore disponible."
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border vigilo-btn-secondary opacity-50 cursor-not-allowed"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
-                  WhatsApp
+                  WhatsApp (bientôt)
                 </button>
               </div>
+              {sendError && (
+                <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+                  {sendError}
+                </p>
+              )}
               <div className="p-3 rounded-lg bg-[var(--surface-inset)] border border-[var(--card-border)] text-xs text-[var(--muted-foreground)] leading-relaxed">
                 <strong className="text-[var(--foreground)]">Aperçu :</strong> « Bonjour {'{prénom}'}, votre responsable IT vous assigne la micro-formation VIGILO «{' '}
                 {module.title} » ({module.durationMinutes} min). {channel === 'Email' ? 'Ouvrez le lien dans votre boîte mail.' : 'Consultez le message WhatsApp professionnel.'}{' '}
