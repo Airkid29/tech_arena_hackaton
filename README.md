@@ -8,12 +8,12 @@ VIGILO est un prototype pédagogique de cyber-résilience comportementale destin
 - API Node.js / Express avec authentification administrateur et annuaire d'entreprise.
 - Comptes, départements et collaborateurs persistés dans Supabase PostgreSQL.
 - Coach IA côté serveur, avec Gemini et/ou RodiumAI si leurs clés sont configurées ; les réponses intégrées sont signalées comme telles.
-- Invitations email de formation, sous réserve d'une configuration SMTP et d'un destinataire appartenant à l'annuaire du compte.
-- Simulateurs Email/WhatsApp pédagogiques dans l'interface.
+- Invitations email de formation transparentes, sous réserve d'une configuration SMTP et d'un destinataire appartenant à l'annuaire du compte. Depuis un brouillon de campagne, « Inviter à une formation » génère un module à relire puis pré-sélectionne les collaborateurs ciblés pour confirmation avant l'envoi.
+- Démonstration locale interactive des scénarios Email/WhatsApp ; elle n'envoie aucun message et n'enregistre aucun résultat réel.
 - Profil d'entreprise persistant (secteur, pays, langue, ton de formation et couleur de marque), utilisé par les contenus pédagogiques et les invitations.
 - Connecteur Gophish serveur en lecture seule pour consulter les campagnes et des statistiques agrégées. La création, le lancement et l'envoi de campagnes Gophish ne sont pas exposés.
 
-Les campagnes créées dans VIGILO sont enregistrées comme brouillons dans Supabase. Aucun lancement, email de campagne, événement ou indicateur n'est généré automatiquement ; les aperçus du simulateur ne sont pas comptabilisés comme des résultats. L'envoi réel de simulations email est désactivé ; WhatsApp Business n'est pas connecté.
+Les campagnes créées dans VIGILO sont enregistrées comme brouillons dans Supabase. « Lancer la démo locale » ouvre l'aperçu interactif sans envoyer d'email ni enregistrer de résultats. Aucun lancement de simulation externe, courriel trompeur, événement ou indicateur de campagne n'est généré automatiquement. Un brouillon peut toutefois servir à préparer une formation : les invitations envoyées sont clairement pédagogiques et ne lancent pas de simulation. L'envoi réel de simulations email est désactivé ; WhatsApp Business n'est pas connecté.
 
 ## Démarrage local
 

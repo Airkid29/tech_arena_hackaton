@@ -468,3 +468,54 @@ export async function getOrgSummary(adminId: string, companySize: CompanySize) {
     })),
   };
 }
+
+export async function seedDemoDirectory(adminId: string): Promise<{ departmentsCount: number; employeesCount: number }> {
+  const database = getDatabase();
+  const existingCount = await countEmployees(adminId);
+  if (existingCount > 0) {
+    return { departmentsCount: 0, employeesCount: existingCount };
+  }
+
+  const depts = [
+    'Direction & Finance',
+    'Ressources Humaines',
+    'Technique & DevOps',
+    'Commercial & Ventes',
+  ];
+  const createdDepts = new Map<string, string>();
+
+  for (const name of depts) {
+    const id = randomUUID();
+    await database.from('departments').insert({
+      id,
+      admin_id: adminId,
+      name,
+    });
+    createdDepts.set(name, id);
+  }
+
+  const demoEmployees = [
+    { firstName: 'Koffi', lastName: 'Mensah', email: 'koffi.mensah@demo-ancytogo.tg', role: 'Directeur Général', dept: 'Direction & Finance', risk: 45 },
+    { firstName: 'Afiwa', lastName: 'Lawson', email: 'afiwa.lawson@demo-ancytogo.tg', role: 'Responsable RH', dept: 'Ressources Humaines', risk: 65 },
+    { firstName: 'Kodjo', lastName: 'Agbeko', email: 'kodjo.agbeko@demo-ancytogo.tg', role: 'Développeur Cloud', dept: 'Technique & DevOps', risk: 20 },
+    { firstName: 'Akossiwa', lastName: 'Amegan', email: 'akossiwa.amegan@demo-ancytogo.tg', role: 'Chargée de Clientèle', dept: 'Commercial & Ventes', risk: 75 },
+    { firstName: 'Komi', lastName: 'Dosseh', email: 'komi.dosseh@demo-ancytogo.tg', role: 'Comptable', dept: 'Direction & Finance', risk: 55 },
+    { firstName: 'Edem', lastName: 'Tossou', email: 'edem.tossou@demo-ancytogo.tg', role: 'Administrateur Systèmes', dept: 'Technique & DevOps', risk: 25 },
+  ];
+
+  for (const emp of demoEmployees) {
+    await database.from('employees').insert({
+      id: randomUUID(),
+      admin_id: adminId,
+      department_id: createdDepts.get(emp.dept) || Array.from(createdDepts.values())[0],
+      first_name: emp.firstName,
+      last_name: emp.lastName,
+      email: emp.email,
+      role: emp.role,
+      risk_score: emp.risk,
+    });
+  }
+
+  return { departmentsCount: depts.length, employeesCount: demoEmployees.length };
+}
+

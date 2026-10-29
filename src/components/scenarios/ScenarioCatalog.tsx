@@ -13,6 +13,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { Scenario, ScenarioCategory } from '../../types';
+import { vigiloCampaignService } from '../../services/api';
 
 interface ScenarioCatalogProps {
   scenarios: Scenario[];
@@ -30,12 +31,33 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>(scenarios[0]?.id || '');
 
+  const [testEmail, setTestEmail] = useState('');
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [testSuccess, setTestSuccess] = useState<string | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+
   const filteredScenarios = scenarios.filter((s) =>
     selectedCategory === 'all' ? true : s.category === selectedCategory
   );
 
   const activeScenario =
     scenarios.find((s) => s.id === selectedScenarioId) || filteredScenarios[0] || scenarios[0];
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail || !activeScenario) return;
+    setIsSendingTest(true);
+    setTestSuccess(null);
+    setTestError(null);
+    try {
+      const res = await vigiloCampaignService.sendLiveTest(testEmail.trim(), activeScenario);
+      setTestSuccess(res.message);
+      setTestEmail('');
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : 'Erreur lors de l’envoi de l’email');
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
 
   const categories = [
     { id: 'all', label: 'Tous les scénarios' },
@@ -56,7 +78,7 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
             <span>Catalogue des scénarios pédagogiques</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Exemples locaux pour la démonstration. Aucun email ou message WhatsApp n&apos;est envoyé.
+            Explorez les scénarios d&apos;ingénierie sociale, testez-les en direct par email ou intégrez-les directement dans vos campagnes.
           </p>
         </div>
 
@@ -151,14 +173,38 @@ export const ScenarioCatalog: React.FC<ScenarioCatalogProps> = ({
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/40 space-y-2">
+            {/* Live Test Decoy Email Dispatch */}
+            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/40 space-y-3">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-bold text-indigo-200">Mode de démonstration</span>
+                <span className="text-xs font-bold text-indigo-200">Envoyer un test réel par email (Live Demo Jury ANCy)</span>
               </div>
-              <p className="text-xs text-slate-300">
-                Le parcours collaborateur est simulé dans l&apos;application ; aucun message n&apos;est transmis à une adresse réelle.
-              </p>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="email"
+                  placeholder="Adresse email du jury ou testeur..."
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-white/10 text-slate-200 text-xs rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  onClick={handleSendTestEmail}
+                  disabled={isSendingTest || !testEmail}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs transition-colors cursor-pointer shrink-0"
+                >
+                  {isSendingTest ? 'Envoi en cours…' : 'Envoyer le leurre'}
+                </button>
+              </div>
+              {testSuccess && (
+                <div role="status" className="text-xs font-mono text-emerald-400 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/30">
+                  {testSuccess}
+                </div>
+              )}
+              {testError && (
+                <div role="alert" className="text-xs font-mono text-rose-400 bg-rose-950/30 p-2.5 rounded-lg border border-rose-500/30">
+                  {testError}
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">

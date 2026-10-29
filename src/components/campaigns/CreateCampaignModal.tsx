@@ -12,10 +12,15 @@ interface CreateCampaignModalProps {
     Campaign,
     'name' | 'description' | 'scenarioId' | 'scenarioName' | 'category' |
     'difficulty' | 'targetEmployeeIds' | 'isReTest' | 'baselineCampaignId'
-  >) => Promise<Campaign>;
+  > & {
+    launchImmediately?: boolean;
+    sendRealEmails?: boolean;
+    scenarioBody?: string;
+  }) => Promise<Campaign>;
   preselectedScenarioId?: string;
   isReTestMode?: boolean;
   baselineCampaign?: Campaign;
+  onSeedDemoDirectory?: () => Promise<void>;
 }
 
 export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
@@ -28,7 +33,9 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   preselectedScenarioId,
   isReTestMode,
   baselineCampaign,
+  onSeedDemoDirectory,
 }) => {
+  const [isSeeding, setIsSeeding] = useState(false);
   const defaultScenario = preselectedScenarioId
     ? scenarios.find((s) => s.id === preselectedScenarioId) || scenarios[0]
     : scenarios[0];
@@ -58,6 +65,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   });
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(defaultScenario?.difficulty || 'Moyen');
   const [adminValidated, setAdminValidated] = useState(false);
+  const [sendRealEmails, setSendRealEmails] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -165,8 +173,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
     setSelectedDepartmentIds(new Set());
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveCampaign = async (launchNow: boolean) => {
     if (!adminValidated || selectedCount === 0 || saving) return;
 
     const selectedEmployees = employees.filter((emp) => selectedEmployeeIds.has(emp.id));
@@ -183,10 +190,13 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
         targetEmployeeIds: selectedEmployees.map((employee) => employee.id),
         isReTest: isReTestMode,
         baselineCampaignId: baselineCampaign?.id,
+        launchImmediately: launchNow,
+        sendRealEmails: launchNow && sendRealEmails,
+        scenarioBody: selectedScenario?.body,
       });
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Impossible d’enregistrer le brouillon.');
+      setSubmitError(error instanceof Error ? error.message : 'Impossible de créer la campagne.');
     } finally {
       setSaving(false);
     }
@@ -223,7 +233,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        <form onSubmit={(e) => { e.preventDefault(); handleSaveCampaign(true); }} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-sm">
             {submitError && (
               <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
@@ -291,9 +301,29 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
               </div>
 
               {employees.length === 0 ? (
-                <p className="text-xs text-[var(--muted-foreground)] p-3 rounded-lg border border-[var(--card-border)] bg-[var(--surface-inset)]">
-                  Aucun collaborateur dans l&apos;annuaire. Ajoutez des services et employés dans Annuaire.
-                </p>
+                <div className="p-4 rounded-xl border border-dashed border-[#f2620a]/40 bg-[#f2620a]/5 text-center space-y-2.5">
+                  <p className="text-xs text-slate-300">
+                    Votre annuaire d&apos;entreprise ne contient aucun collaborateur pour le moment.
+                  </p>
+                  {onSeedDemoDirectory && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setIsSeeding(true);
+                        try {
+                          await onSeedDemoDirectory();
+                        } finally {
+                          setIsSeeding(false);
+                        }
+                      }}
+                      disabled={isSeeding}
+                      className="vigilo-btn-orange inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md cursor-pointer disabled:opacity-50"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-white" />
+                      <span>{isSeeding ? 'Chargement de la cohorte…' : '⚡ Charger l’annuaire démo ANCy (6 collaborateurs)'}</span>
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="rounded-lg border border-[var(--card-border)] bg-[var(--surface-inset)] overflow-hidden">
                   <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[var(--card-border)] bg-[var(--muted)]">
@@ -406,21 +436,37 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
               </div>
             </div>
 
-            <div className="p-3.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 space-y-3">
+            <div className="p-3.5 rounded-xl border border-[#f2620a]/30 bg-[#f2620a]/5 space-y-3">
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={adminValidated}
                   onChange={(e) => setAdminValidated(e.target.checked)}
-                  className="mt-1 rounded accent-[var(--primary)]"
+                  className="mt-1 rounded accent-[#f2620a]"
                 />
                 <span className="text-[var(--foreground)] text-xs leading-relaxed">
-                  <strong className="text-amber-800 dark:text-amber-300">Validation admin :</strong> j&apos;atteste que ce brouillon pédagogique est autorisé et non punitif au sein de l&apos;entreprise.
+                  <strong className="text-[#fb923c]">Validation ANCy & Cadre Éthique :</strong> j&apos;atteste que cette simulation pédagogique et non punitive est autorisée par la direction au sein de l&apos;organisation.
                 </span>
               </label>
-              <p className="pt-2 border-t border-amber-200 dark:border-amber-900/50 text-[var(--muted-foreground)] text-xs leading-relaxed">
-                Cette action enregistre uniquement un brouillon. Aucun email n&apos;est envoyé et aucun indicateur n&apos;est créé automatiquement.
-              </p>
+
+              <div className="pt-2 border-t border-white/10 space-y-1.5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendRealEmails}
+                    onChange={(e) => setSendRealEmails(e.target.checked)}
+                    className="rounded accent-[#f2620a]"
+                  />
+                  <span className="text-xs text-slate-200 font-semibold">
+                    Envoyer les leurres par email réel aux collaborateurs ciblés (SMTP Live)
+                  </span>
+                </label>
+                <p className="text-[11px] text-slate-400 pl-6">
+                  {sendRealEmails
+                    ? '⚡ Envoi direct : chaque cible recevra l’email avec le piège pédagogique et lien de redirection VIGILO.'
+                    : '🎯 Mode Simulation interactif : la campagne démarre immédiatement avec tableau de bord en direct.'}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -428,17 +474,26 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="vigilo-btn-secondary w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm cursor-pointer"
+              className="vigilo-btn-secondary w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs cursor-pointer"
             >
               Annuler
             </button>
             <button
-              type="submit"
+              type="button"
               disabled={!adminValidated || selectedCount === 0 || saving}
-              className="vigilo-btn-orange w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-40 cursor-pointer"
+              onClick={() => handleSaveCampaign(false)}
+              className="vigilo-btn-secondary w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-40"
             >
-              <Play className="w-4 h-4" />
-              {saving ? 'Enregistrement…' : `Enregistrer le brouillon (${selectedCount})`}
+              Enregistrer en brouillon
+            </button>
+            <button
+              type="button"
+              disabled={!adminValidated || selectedCount === 0 || saving}
+              onClick={() => handleSaveCampaign(true)}
+              className="vigilo-btn-orange w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white disabled:opacity-40 shadow-lg cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-white" />
+              <span>{saving ? 'Lancement…' : (isReTestMode ? `Démarrer le Re-test (${selectedCount})` : `Lancer la campagne (${selectedCount})`)}</span>
             </button>
           </div>
         </form>

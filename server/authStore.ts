@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import { getDatabase, unwrapDatabaseResult } from './database';
+import { seedDemoDirectory } from './orgStore';
 
 export type CompanySize = '1-10' | '11-50' | '51-100' | '101-150' | '150+';
 export type VigiloService =
@@ -115,6 +116,7 @@ export async function registerAdmin(input: {
     throw httpError('Un compte existe déjà avec cet email', 409);
   }
   const row = unwrapDatabaseResult('création du compte', result) as AdminRow;
+  await seedDemoDirectory(row.id).catch((err) => console.error('[Auth] Erreur seed demo:', err));
   return toPublic(toRecord(row));
 }
 

@@ -24,6 +24,7 @@ import {
   handleDeleteEmployee,
   handleGetCompanyProfile,
   handleUpdateCompanyProfile,
+  handleSeedDemoDirectory,
 } from './server/orgRoutes';
 import {
   handleAnalyzeResults,
@@ -36,7 +37,14 @@ import {
   handleSendTrainingInvite,
 } from './server/emailRoutes';
 import { handleGophishCampaigns } from './server/gophishRoutes';
-import { handleCreateCampaignDraft, handleListCampaigns } from './server/campaignRoutes';
+import {
+  handleCreateCampaignDraft,
+  handleListCampaigns,
+  handleLaunchCampaign,
+  handleSimulateCampaignEvent,
+  handleCompleteCampaign,
+  handleSendLiveTest,
+} from './server/campaignRoutes';
 
 dotenv.config();
 
@@ -106,7 +114,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
     ),
     aiProvidersConfigured: providers,
     smtpConfigured: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
-    liveSimulationDelivery: 'disabled',
+    liveSimulationDelivery: 'enabled',
   });
 });
 
@@ -143,10 +151,15 @@ app.get('/api/org/employees/:id', handleGetEmployee);
 app.post('/api/org/employees', handleCreateEmployee);
 app.patch('/api/org/employees/:id', handleUpdateEmployee);
 app.delete('/api/org/employees/:id', handleDeleteEmployee);
+app.post('/api/org/seed-demo', handleSeedDemoDirectory);
 
 const aiRateLimit = createRateLimiter(20, 5 * 60 * 1000, 'ai');
 app.get('/api/campaigns', handleListCampaigns);
-app.post('/api/campaigns', createRateLimiter(20, 60 * 60 * 1000, 'campaign-draft'), handleCreateCampaignDraft);
+app.post('/api/campaigns', createRateLimiter(30, 60 * 60 * 1000, 'campaign-create'), handleCreateCampaignDraft);
+app.post('/api/campaigns/:id/launch', handleLaunchCampaign);
+app.post('/api/campaigns/:id/simulate-event', handleSimulateCampaignEvent);
+app.post('/api/campaigns/:id/complete', handleCompleteCampaign);
+
 app.post('/api/vigilo-ai/generate-scenario', aiRateLimit, handleGenerateScenario);
 app.post('/api/rodium-ai/generate-scenario', aiRateLimit, handleGenerateScenario);
 app.post('/api/vigilo-ai/analyze-results', aiRateLimit, handleAnalyzeResults);
@@ -154,14 +167,9 @@ app.post('/api/rodium-ai/analyze-results', aiRateLimit, handleAnalyzeResults);
 app.post('/api/vigilo-ai/generate-training', aiRateLimit, handleGenerateTraining);
 app.post('/api/rodium-ai/generate-training', aiRateLimit, handleGenerateTraining);
 
-app.post('/api/send-training-invite', createRateLimiter(10, 60 * 60 * 1000, 'training-invite'), handleSendTrainingInvite);
+app.post('/api/send-training-invite', createRateLimiter(20, 60 * 60 * 1000, 'training-invite'), handleSendTrainingInvite);
 app.get('/api/integrations/gophish/campaigns', handleGophishCampaigns);
-app.post('/api/send-live-test', (_req: Request, res: Response) => {
-  res.status(410).json({
-    success: false,
-    error: 'L’envoi réel de simulations trompeuses est désactivé. Utilisez le simulateur pédagogique intégré.',
-  });
-});
+app.post('/api/send-live-test', createRateLimiter(20, 15 * 60 * 1000, 'live-test'), handleSendLiveTest);
 
 app.use('/api', (_req: Request, res: Response) => {
   res.status(404).json({ success: false, error: 'Route API introuvable' });

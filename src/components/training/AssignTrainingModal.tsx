@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   X,
   Send,
@@ -15,6 +15,7 @@ interface AssignTrainingModalProps {
   isOpen: boolean;
   module: TrainingModule | null;
   employees: Employee[];
+  initialEmployeeIds?: string[];
   onClose: () => void;
   onAssign: (
     moduleId: string,
@@ -27,6 +28,7 @@ export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
   isOpen,
   module,
   employees,
+  initialEmployeeIds = [],
   onClose,
   onAssign,
 }) => {
@@ -36,6 +38,14 @@ export const AssignTrainingModal: React.FC<AssignTrainingModalProps> = ({
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<{ count: number; error?: string } | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !module) return;
+    const availableIds = new Set(employees.map((employee) => employee.id));
+    setSelectedIds(new Set(initialEmployeeIds.filter((id) => availableIds.has(id))));
+    setDone(null);
+    setSendError(null);
+  }, [isOpen, module?.id]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();

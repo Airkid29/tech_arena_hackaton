@@ -185,10 +185,7 @@ async function generateJson(prompt: string): Promise<{
           : {}),
       };
     } catch (error) {
-      console.error(
-        `[VIGILO IA] Échec du fournisseur ${provider}:`,
-        error instanceof Error ? error.name : 'erreur inconnue'
-      );
+      console.error(`[VIGILO IA] Échec du fournisseur ${provider}: ${providerFailureReason(error)}`);
       failures.push(`${provider}: ${providerFailureReason(error)}`);
     }
   }

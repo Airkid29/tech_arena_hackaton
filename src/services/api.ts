@@ -1,4 +1,4 @@
-import { Campaign, ScenarioCategory, DifficultyLevel, AIAnalysis, TrainingModule } from '../types';
+import { Campaign, Scenario, ScenarioCategory, DifficultyLevel, AIAnalysis, TrainingModule } from '../types';
 import type {
   AdminPublic,
   CompanySize,
@@ -137,20 +137,101 @@ export const vigiloCampaignService = {
     return data.data as Campaign[];
   },
 
-  async createDraft(campaign: Pick<
+  async createCampaign(campaign: Pick<
     Campaign,
     'name' | 'description' | 'scenarioId' | 'scenarioName' | 'category' |
     'difficulty' | 'targetEmployeeIds' | 'isReTest' | 'baselineCampaignId'
-  >): Promise<Campaign> {
+  > & {
+    launchImmediately?: boolean;
+    sendRealEmails?: boolean;
+    scenarioBody?: string;
+  }): Promise<Campaign> {
     const response = await apiFetch('/api/campaigns', {
       method: 'POST',
       body: JSON.stringify(campaign),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.success || !data.data) {
-      throw new Error(data.error || 'Impossible d’enregistrer le brouillon');
+      throw new Error(data.error || 'Impossible de créer la campagne');
     }
     return data.data as Campaign;
+  },
+
+  async createDraft(campaign: Pick<
+    Campaign,
+    'name' | 'description' | 'scenarioId' | 'scenarioName' | 'category' |
+    'difficulty' | 'targetEmployeeIds' | 'isReTest' | 'baselineCampaignId'
+  >): Promise<Campaign> {
+    return this.createCampaign({ ...campaign, launchImmediately: false });
+  },
+
+  async launchCampaign(
+    campaignId: string,
+    options?: { sendRealEmails?: boolean; scenarioBody?: string }
+  ): Promise<{ campaign: Campaign; message: string; emailsSent: number }> {
+    const response = await apiFetch(`/api/campaigns/${encodeURIComponent(campaignId)}/launch`, {
+      method: 'POST',
+      body: JSON.stringify(options || {}),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Impossible de lancer la campagne');
+    }
+    return {
+      campaign: data.data as Campaign,
+      message: data.message || 'Campagne lancée avec succès',
+      emailsSent: Number(data.emailsSent) || 0,
+    };
+  },
+
+  async simulateCampaignEvent(
+    campaignId: string,
+    eventType: 'open' | 'click' | 'report' | 'auto_cohort'
+  ): Promise<Campaign> {
+    const response = await apiFetch(`/api/campaigns/${encodeURIComponent(campaignId)}/simulate-event`, {
+      method: 'POST',
+      body: JSON.stringify({ eventType }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Échec de la simulation d’événement');
+    }
+    return data.data as Campaign;
+  },
+
+  async completeCampaign(campaignId: string): Promise<Campaign> {
+    const response = await apiFetch(`/api/campaigns/${encodeURIComponent(campaignId)}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || 'Impossible de clôturer la campagne');
+    }
+    return data.data as Campaign;
+  },
+
+  async sendLiveTest(
+    email: string,
+    scenario: Scenario,
+    origin?: string
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await apiFetch('/api/send-live-test', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        scenario,
+        origin: origin || window.location.origin,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Impossible d’envoyer le test live');
+    }
+    return {
+      success: true,
+      message: data.message || 'Email de test envoyé avec succès',
+    };
   },
 };
 
@@ -159,6 +240,13 @@ export const vigiloOrgService = {
     const res = await apiFetch('/api/org/summary');
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Impossible de charger le résumé org');
+    return data.data;
+  },
+
+  async seedDemoDirectory(): Promise<{ departmentsCount: number; employeesCount: number }> {
+    const res = await apiFetch('/api/org/seed-demo', { method: 'POST', body: JSON.stringify({}) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible d’initialiser l’annuaire de démonstration');
     return data.data;
   },
 

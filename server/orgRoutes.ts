@@ -17,6 +17,7 @@ import {
   getOrgSummary,
   getCompanyProfile,
   updateCompanyProfile,
+  seedDemoDirectory,
   type CompanyProfile,
 } from './orgStore';
 import { DatabaseConfigurationError } from './database';
@@ -194,6 +195,20 @@ export async function handleDeleteEmployee(req: AuthRequest, res: Response) {
     const employeeId = String(req.params.id || '');
     await deleteEmployee(id, employeeId);
     return res.json({ success: true });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function handleSeedDemoDirectory(req: AuthRequest, res: Response) {
+  try {
+    const id = adminId(req);
+    const result = await seedDemoDirectory(id);
+    return res.json({
+      success: true,
+      data: result,
+      message: 'Annuaire de démonstration ANCy chargé avec succès !',
+    });
   } catch (error) {
     return handleError(res, error);
   }

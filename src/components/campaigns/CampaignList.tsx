@@ -13,6 +13,7 @@ import {
   Clock,
   RotateCcw,
   Sparkles,
+  Play,
 } from 'lucide-react';
 import { Campaign } from '../../types';
 
@@ -21,6 +22,7 @@ interface CampaignListProps {
   onSelectCampaign: (id: string) => void;
   onOpenCreateModal: () => void;
   onSimulateCampaign: (campaign: Campaign) => void;
+  onLaunchCampaign?: (campaign: Campaign) => void;
 }
 
 export const CampaignList: React.FC<CampaignListProps> = ({
@@ -28,6 +30,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
   onSelectCampaign,
   onOpenCreateModal,
   onSimulateCampaign,
+  onLaunchCampaign,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -63,7 +66,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
             <span>Campagnes de simulation</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Enregistrez des brouillons pédagogiques. Aucun envoi de campagne ni suivi de comportement n&apos;est activé.
+            Pilotez vos simulations d&apos;ingénierie sociale, mesurez la vulnérabilité humaine et renforcez la cyber-résilience de vos collaborateurs.
           </p>
         </div>
 
@@ -143,14 +146,17 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                     </span>
                   )}
                   <span
-                    className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border ${
+                    className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${
                       camp.status === 'en_cours'
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 font-semibold'
                         : camp.status === 'brouillon'
                           ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
                           : 'bg-slate-800 text-slate-400 border-white/10'
                     }`}
                   >
+                    {camp.status === 'en_cours' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    )}
                     {statusLabel(camp.status)}
                   </span>
                 </div>
@@ -186,13 +192,26 @@ export const CampaignList: React.FC<CampaignListProps> = ({
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-white/10 text-xs">
-              <button
-                onClick={() => onSimulateCampaign(camp)}
-                className="text-slate-400 hover:text-white flex items-center gap-1.5 cursor-pointer font-mono text-[11px]"
-              >
-                <Eye className="w-3.5 h-3.5 text-[#fb923c]" />
-                <span>Aperçu pédagogique</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onSimulateCampaign(camp)}
+                  className="text-slate-400 hover:text-white flex items-center gap-1.5 cursor-pointer font-mono text-[11px]"
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#fb923c]" />
+                  <span>Aperçu piège</span>
+                </button>
+
+                {onLaunchCampaign && camp.status === 'brouillon' && (
+                  <button
+                    onClick={() => onLaunchCampaign(camp)}
+                    className="px-2.5 py-1 rounded-lg bg-[#f2620a] hover:bg-[#e05606] text-white text-[11px] font-bold flex items-center gap-1 shadow-md transition-all cursor-pointer"
+                    title="Lancer cette campagne immédiatement"
+                  >
+                    <Play className="w-3 h-3 fill-white" />
+                    <span>Lancer</span>
+                  </button>
+                )}
+              </div>
 
               <button
                 onClick={() => onSelectCampaign(camp.id)}
