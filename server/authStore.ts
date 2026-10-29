@@ -69,6 +69,8 @@ function httpError(message: string, status: number): Error {
   return Object.assign(new Error(message), { status });
 }
 
+const memoryAdmins = new Map<string, AdminRecord>();
+
 export async function registerAdmin(input: {
   email: string;
   password: string;
@@ -99,25 +101,53 @@ export async function registerAdmin(input: {
   }
 
   const passwordHash = await bcrypt.hash(input.password, 12);
-  const result = await getDatabase()
-    .from('admins')
-    .insert({
-      id: randomUUID(),
-      email,
-      password_hash: passwordHash,
-      company_name: companyName,
-      company_size: input.companySize,
-      services: input.services,
-    })
-    .select(ADMIN_FIELDS)
-    .single();
 
-  if (result.error?.code === '23505') {
-    throw httpError('Un compte existe déjà avec cet email', 409);
+  try {
+    const result = await getDatabase()
+      .from('admins')
+      .insert({
+        id: randomUUID(),
+        email,
+        password_hash: passwordHash,
+        company_name: companyName,
+        company_size: input.companySize,
+        services: input.services,
+      })
+      .select(ADMIN_FIELDS)
+      .single();
+
+    if (result.error?.code === '23505') {
+      throw httpError('Un compte existe déjà avec cet email', 409);
+    }
+    const row = unwrapDatabaseResult('création du compte', result) as AdminRow;
+    const record = toRecord(row);
+    memoryAdmins.set(record.id, record);
+    memoryAdmins.set(`email:${record.email}`, record);
+    await seedDemoDirectory(row.id).catch((err) => console.error('[Auth] Erreur seed demo:', err));
+    return toPublic(record);
+  } catch (error) {
+    if (error && typeof error === 'object' && 'status' in error && (error as { status: number }).status === 409) {
+      throw error;
+    }
+    console.warn('[Auth] Supabase indisponible pour registerAdmin, bascule sur mémoire sécurisée:', error);
+    if (memoryAdmins.has(`email:${email}`)) {
+      throw httpError('Un compte existe déjà avec cet email', 409);
+    }
+    const id = randomUUID();
+    const record: AdminRecord = {
+      id,
+      email,
+      passwordHash,
+      companyName,
+      companySize: input.companySize,
+      services: input.services,
+      createdAt: new Date().toISOString(),
+    };
+    memoryAdmins.set(id, record);
+    memoryAdmins.set(`email:${email}`, record);
+    await seedDemoDirectory(id).catch(() => {});
+    return toPublic(record);
   }
-  const row = unwrapDatabaseResult('création du compte', result) as AdminRow;
-  await seedDemoDirectory(row.id).catch((err) => console.error('[Auth] Erreur seed demo:', err));
-  return toPublic(toRecord(row));
 }
 
 export async function verifyLogin(emailInput: string, password: string): Promise<AdminPublic | null> {
@@ -125,25 +155,50 @@ export async function verifyLogin(emailInput: string, password: string): Promise
     throw httpError('Email et mot de passe invalides', 400);
   }
   const email = emailInput.trim().toLowerCase();
-  const result = await getDatabase()
-    .from('admins')
-    .select(ADMIN_FIELDS)
-    .eq('email', email)
-    .maybeSingle();
-  const row = unwrapDatabaseResult('recherche du compte', result) as AdminRow | null;
-  if (!row) return null;
 
-  const admin = toRecord(row);
-  const valid = await bcrypt.compare(password, admin.passwordHash);
-  return valid ? toPublic(admin) : null;
+  try {
+    const result = await getDatabase()
+      .from('admins')
+      .select(ADMIN_FIELDS)
+      .eq('email', email)
+      .maybeSingle();
+    const row = unwrapDatabaseResult('recherche du compte', result) as AdminRow | null;
+    if (row) {
+      const admin = toRecord(row);
+      memoryAdmins.set(admin.id, admin);
+      memoryAdmins.set(`email:${admin.email}`, admin);
+      const valid = await bcrypt.compare(password, admin.passwordHash);
+      return valid ? toPublic(admin) : null;
+    }
+  } catch (error) {
+    console.warn('[Auth] Supabase inaccessible pour verifyLogin, consultation du cache mémoire:', error);
+  }
+
+  const mem = memoryAdmins.get(`email:${email}`);
+  if (mem) {
+    const valid = await bcrypt.compare(password, mem.passwordHash);
+    return valid ? toPublic(mem) : null;
+  }
+  return null;
 }
 
 export async function findAdminById(id: string): Promise<AdminPublic | null> {
-  const result = await getDatabase()
-    .from('admins')
-    .select(ADMIN_FIELDS)
-    .eq('id', id)
-    .maybeSingle();
-  const row = unwrapDatabaseResult('lecture du compte', result) as AdminRow | null;
-  return row ? toPublic(toRecord(row)) : null;
+  try {
+    const result = await getDatabase()
+      .from('admins')
+      .select(ADMIN_FIELDS)
+      .eq('id', id)
+      .maybeSingle();
+    const row = unwrapDatabaseResult('lecture du compte', result) as AdminRow | null;
+    if (row) {
+      const admin = toRecord(row);
+      memoryAdmins.set(admin.id, admin);
+      return toPublic(admin);
+    }
+  } catch (error) {
+    console.warn('[Auth] Supabase inaccessible pour findAdminById, consultation mémoire:', error);
+  }
+
+  const mem = memoryAdmins.get(id);
+  return mem ? toPublic(mem) : null;
 }

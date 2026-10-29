@@ -11,13 +11,18 @@ import type {
 } from '../types';
 
 async function apiFetch(url: string, init: RequestInit = {}) {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('vigilo_token') : null;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...((init.headers as Record<string, string>) || {}),
+  };
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   const response = await fetch(url, {
     ...init,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init.headers || {}),
-    },
+    headers,
   });
   return response;
 }
@@ -37,6 +42,11 @@ export const vigiloAuthService = {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Inscription échouée');
     if (!data.data) throw new Error('Réponse inscription invalide');
+    if (data.token) {
+      try {
+        localStorage.setItem('vigilo_token', data.token);
+      } catch {}
+    }
     return data.data;
   },
 
@@ -48,11 +58,19 @@ export const vigiloAuthService = {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Connexion échouée');
     if (!data.data) throw new Error('Réponse connexion invalide');
+    if (data.token) {
+      try {
+        localStorage.setItem('vigilo_token', data.token);
+      } catch {}
+    }
     return data.data;
   },
 
   async logout(): Promise<void> {
-    await apiFetch('/api/auth/logout', { method: 'POST' });
+    try {
+      localStorage.removeItem('vigilo_token');
+    } catch {}
+    await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   },
 
   async me(): Promise<AdminPublic | null> {
@@ -233,6 +251,25 @@ export const vigiloCampaignService = {
       message: data.message || 'Email de test envoyé avec succès',
     };
   },
+
+  async trackPublicEvent(params: {
+    campaignId: string;
+    eventType: 'open' | 'click' | 'report';
+    employeeId?: string;
+    scenarioId?: string;
+  }): Promise<{ success: boolean; data?: Campaign; clicked?: number; clickRate?: number }> {
+    try {
+      const response = await fetch('/api/public/campaign-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      const data = await response.json().catch(() => ({}));
+      return { success: response.ok, ...data };
+    } catch {
+      return { success: false };
+    }
+  },
 };
 
 export const vigiloOrgService = {
@@ -382,4 +419,50 @@ export const vigiloTrainingService = {
     }
     return true;
   },
+
+  async sendTrainingInvitesBatch(params: {
+    employeeIds: string[];
+    module: TrainingModule;
+    origin?: string;
+  }): Promise<{ success: boolean; sentCount: number; failedCount: number }> {
+    const response = await apiFetch('/api/send-training-invites-batch', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...params,
+        origin: params.origin || (typeof window !== 'undefined' ? window.location.origin : ''),
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Échec de l’envoi groupé des invitations');
+    }
+    return data;
+  },
 };
+
+export const vigiloFlashService = {
+  async broadcastAlert(params: {
+    articleId?: string;
+    title: string;
+    category: string;
+    summary: string;
+    content: string;
+    keyTakeaway: string;
+    channels: ('Email' | 'WhatsApp')[];
+    origin?: string;
+  }): Promise<{ success: boolean; sentCount: number; message: string }> {
+    const response = await apiFetch('/api/flash-news/broadcast', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...params,
+        origin: params.origin || (typeof window !== 'undefined' ? window.location.origin : ''),
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Échec de la diffusion de l’alerte Flash');
+    }
+    return data;
+  },
+};
+

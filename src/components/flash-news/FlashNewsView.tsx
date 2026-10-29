@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { FlashArticle } from '../../types';
+import { vigiloFlashService } from '../../services/api';
 
 interface FlashNewsViewProps {
   articles: FlashArticle[];
@@ -30,7 +31,9 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
 }) => {
   const [selectedArticleId, setSelectedArticleId] = useState<string>(articles[0]?.id || '');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [broadcastedNotice, setBroadcastedNotice] = useState<string | null>(null);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastSuccess, setBroadcastSuccess] = useState<string | null>(null);
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
 
   // New article form state
   const [title, setTitle] = useState('');
@@ -38,20 +41,42 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
   const [keyTakeaway, setKeyTakeaway] = useState('');
-  const [channels, setChannels] = useState<('Email' | 'WhatsApp')[]>(['Email', 'WhatsApp']);
+  const [channels, setChannels] = useState<('Email' | 'WhatsApp')[]>(['Email']);
+  const [autoBroadcast, setAutoBroadcast] = useState(true);
 
   const activeArticle = articles.find((a) => a.id === selectedArticleId) || articles[0];
 
-  const handleBroadcast = () => {
-    setBroadcastedNotice('La diffusion email/WhatsApp n’est pas connectée : aucun message n’a été envoyé.');
-    setTimeout(() => setBroadcastedNotice(null), 5000);
+  const handleBroadcast = async (art?: FlashArticle) => {
+    const target = art || activeArticle;
+    if (!target) return;
+    setIsBroadcasting(true);
+    setBroadcastSuccess(null);
+    setBroadcastError(null);
+    try {
+      const res = await vigiloFlashService.broadcastAlert({
+        articleId: target.id,
+        title: target.title,
+        category: target.category,
+        summary: target.summary,
+        content: target.content,
+        keyTakeaway: target.keyTakeaway,
+        channels: target.channels,
+      });
+      setBroadcastSuccess(res.message || `Alerte Flash diffusée avec succès à ${res.sentCount} collaborateurs !`);
+      setTimeout(() => setBroadcastSuccess(null), 6000);
+    } catch (err) {
+      setBroadcastError(err instanceof Error ? err.message : 'Échec de la diffusion email');
+      setTimeout(() => setBroadcastError(null), 6000);
+    } finally {
+      setIsBroadcasting(false);
+    }
   };
 
-  const handleSubmitNew = (e: React.FormEvent) => {
+  const handleSubmitNew = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
-    onCreateArticle({
+    const newArticleData = {
       title,
       category,
       summary: summary || title,
@@ -59,15 +84,33 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
       author: 'Pôle Sécurité IT VIGILO',
       keyTakeaway: keyTakeaway || 'Toujours vérifier avant de cliquer ou de transférer des fonds.',
       channels,
-    });
+    };
+
+    onCreateArticle(newArticleData);
+
+    if (autoBroadcast && channels.includes('Email')) {
+      setIsBroadcasting(true);
+      try {
+        const res = await vigiloFlashService.broadcastAlert(newArticleData);
+        setBroadcastSuccess(res.message || `Alerte créée et diffusée par email à ${res.sentCount} collaborateur(s) !`);
+      } catch (err) {
+        setBroadcastError(err instanceof Error ? err.message : 'Alerte créée, mais la diffusion email a échoué');
+      } finally {
+        setIsBroadcasting(false);
+      }
+    } else {
+      setBroadcastSuccess('Alerte enregistrée dans votre session.');
+    }
 
     setTitle('');
     setContent('');
     setSummary('');
     setKeyTakeaway('');
     setIsCreateModalOpen(false);
-    setBroadcastedNotice('Alerte ajoutée à cette session uniquement ; elle n’est ni enregistrée sur le serveur ni diffusée.');
-    setTimeout(() => setBroadcastedNotice(null), 4000);
+    setTimeout(() => {
+      setBroadcastSuccess(null);
+      setBroadcastError(null);
+    }, 6000);
   };
 
   return (
@@ -76,34 +119,50 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight">Flash Infos & Veille Cyber</h1>
-            <span className="text-xs px-2 py-0.5 rounded font-mono bg-blue-500/10 text-blue-500 border border-blue-500/20">
-              Sensibilisation continue
+            <h1 className="text-xl font-bold tracking-tight">Flash Infos & Alertes Sécurité</h1>
+            <span className="text-xs px-2 py-0.5 rounded font-mono bg-red-500/10 text-red-500 border border-red-500/20">
+              Diffusion Active
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Rédigez des contenus de sensibilisation. La diffusion email et WhatsApp n&apos;est pas connectée.
+            Rédigez et diffusez en un clic des alertes d'urgence ou bulletins réflexes par email à vos collaborateurs.
           </p>
         </div>
 
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-sm transition-all cursor-pointer self-start sm:self-auto"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium text-xs shadow-sm transition-all cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>Rédiger une alerte</span>
+          <span>Rédiger une alerte Flash</span>
         </button>
       </div>
 
-      {/* Broadcast Toast Notice */}
-      {broadcastedNotice && (
+      {/* Broadcast Success Notice */}
+      {broadcastSuccess && (
         <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between gap-3 animate-in fade-in duration-200">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span>{broadcastedNotice}</span>
+            <span className="font-semibold">{broadcastSuccess}</span>
           </div>
           <button
-            onClick={() => setBroadcastedNotice(null)}
+            onClick={() => setBroadcastSuccess(null)}
+            className="text-xs font-semibold hover:underline"
+          >
+            Fermer
+          </button>
+        </div>
+      )}
+
+      {/* Broadcast Error Notice */}
+      {broadcastError && (
+        <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs flex items-center justify-between gap-3 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-red-500 shrink-0" />
+            <span className="font-semibold">{broadcastError}</span>
+          </div>
+          <button
+            onClick={() => setBroadcastError(null)}
             className="text-xs font-semibold hover:underline"
           >
             Fermer
@@ -225,12 +284,17 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
               </div>
 
               <button
-                onClick={handleBroadcast}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-sm transition-all cursor-pointer self-start sm:self-auto"
-                title="Renvoyer une notification rappel aux collaborateurs"
+                onClick={() => handleBroadcast()}
+                disabled={isBroadcasting}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                  isBroadcasting
+                    ? 'bg-emerald-700/60 cursor-wait'
+                    : 'bg-emerald-600 hover:bg-emerald-500 cursor-pointer'
+                } text-white font-medium text-xs shadow-sm transition-all self-start sm:self-auto`}
+                title="Diffuser cette alerte par email à tous les collaborateurs de l'entreprise"
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>Vérifier la diffusion (non connectée)</span>
+                <Send className={`w-3.5 h-3.5 ${isBroadcasting ? 'animate-spin' : ''}`} />
+                <span>{isBroadcasting ? 'Diffusion en cours…' : 'Diffuser l’alerte aux collaborateurs (Email)'}</span>
               </button>
             </div>
           </div>
@@ -341,6 +405,19 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
                 />
               </div>
 
+              <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/5 flex items-center justify-between gap-3">
+                <div className="text-xs">
+                  <span className="font-semibold block text-slate-900 dark:text-white">Diffusion immédiate par email</span>
+                  <span className="text-slate-500">Envoyer ce flash info à tous les collaborateurs via SMTP dès l'enregistrement</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoBroadcast}
+                  onChange={(e) => setAutoBroadcast(e.target.checked)}
+                  className="w-4 h-4 rounded text-red-600 cursor-pointer"
+                />
+              </div>
+
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
@@ -351,9 +428,13 @@ export const FlashNewsView: React.FC<FlashNewsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs cursor-pointer"
+                  disabled={isBroadcasting}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                    isBroadcasting ? 'bg-red-700/60 cursor-wait' : 'bg-red-600 hover:bg-red-500 cursor-pointer'
+                  } text-white font-medium text-xs`}
                 >
-                  Enregistrer et diffuser
+                  <Send className={`w-3.5 h-3.5 ${isBroadcasting ? 'animate-spin' : ''}`} />
+                  <span>{isBroadcasting ? 'Diffusion en cours…' : 'Enregistrer et diffuser'}</span>
                 </button>
               </div>
             </form>

@@ -73,36 +73,32 @@ function validTrainingModule(value: unknown): value is Record<string, unknown> {
   );
 }
 
-function publicAppUrl(): URL {
-  const configured = process.env.APP_URL || (
-    process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000'
-  );
-  if (!configured) {
-    throw Object.assign(new Error('APP_URL doit être configurée'), {
-      status: 503,
-      publicMessage: 'Configuration email incomplète : définissez APP_URL sur l’adresse HTTPS de la plateforme.',
-    });
+export function publicAppUrl(req?: Request): URL {
+  let target = '';
+  if (req?.body && typeof req.body.origin === 'string' && req.body.origin.startsWith('http')) {
+    target = req.body.origin;
+  } else if (req?.get('origin') && req.get('origin')?.startsWith('http')) {
+    target = req.get('origin')!;
+  } else if (process.env.VERCEL_URL) {
+    target = `https://${process.env.VERCEL_URL}`;
+  } else if (req?.get('x-forwarded-host')) {
+    const proto = req.get('x-forwarded-proto') || 'https';
+    target = `${proto}://${req.get('x-forwarded-host')}`;
+  } else if (process.env.APP_URL && !process.env.APP_URL.includes('localhost')) {
+    target = process.env.APP_URL;
+  } else if (process.env.APP_URL) {
+    target = process.env.APP_URL;
+  } else {
+    target = 'http://localhost:3000';
   }
-  let url: URL;
+
   try {
-    url = new URL(configured);
+    return new URL(target);
   } catch {
-    throw Object.assign(new Error('APP_URL invalide'), {
-      status: 503,
-      publicMessage: 'Configuration email invalide : vérifiez APP_URL.',
-    });
+    return new URL('http://localhost:3000');
   }
-  if (
-    (process.env.NODE_ENV === 'production' && (url.protocol !== 'https:' || url.hostname === 'localhost')) ||
-    (url.protocol !== 'https:' && url.hostname !== 'localhost')
-  ) {
-    throw Object.assign(new Error('APP_URL doit utiliser HTTPS en dehors du développement local'), {
-      status: 503,
-      publicMessage: 'Configuration email invalide : APP_URL doit utiliser HTTPS en production.',
-    });
-  }
-  return url;
 }
+
 
 function smtpErrorDetails(error: unknown): { code?: string; responseCode?: number; command?: string } {
   if (!error || typeof error !== 'object') return {};
@@ -175,13 +171,16 @@ export async function handleSendTrainingInvite(req: AuthRequest, res: Response) 
         error: 'Configuration SMTP invalide : vérifiez SMTP_PORT.',
       });
     }
-    const trainingUrl = publicAppUrl();
+    const trainingUrl = publicAppUrl(req);
 
     const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: smtpPort,
       secure: smtpPort === 465,
       requireTLS: smtpPort !== 465,
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 50,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
     });
     try {
@@ -299,9 +298,10 @@ export async function handleGetTrainingInvitation(req: Request, res: Response) {
   }
 
   try {
-    const result = await getDatabase()
+    const database = getDatabase();
+    const result = await database
       .from('training_invitations')
-      .select('id,admin_id,module_id,expires_at,completed_at,training_modules!inner(module_data)')
+      .select('id,admin_id,module_id,expires_at,completed_at')
       .eq('token_hash', tokenHash)
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
@@ -311,20 +311,28 @@ export async function handleGetTrainingInvitation(req: Request, res: Response) {
       module_id: string;
       expires_at: string;
       completed_at: string | null;
-      training_modules: { module_data: unknown };
     } | null;
 
     if (!invitation) {
       return res.status(404).json({ success: false, error: 'Lien de formation invalide ou expiré' });
     }
-    if (!validTrainingModule(invitation.training_modules.module_data)) {
-      console.error('[Email formation] Module invalide associé à une invitation:', invitation.id);
-      return res.status(500).json({ success: false, error: 'Contenu de formation invalide' });
+
+    const modResult = await database
+      .from('training_modules')
+      .select('module_data')
+      .eq('admin_id', invitation.admin_id)
+      .eq('id', invitation.module_id)
+      .maybeSingle();
+    const modRow = unwrapDatabaseResult('lecture du module de formation', modResult) as { module_data: unknown } | null;
+
+    if (!modRow || !validTrainingModule(modRow.module_data)) {
+      return res.status(404).json({ success: false, error: 'Contenu de formation introuvable ou invalide' });
     }
+
     res.setHeader('Cache-Control', 'no-store');
     return res.json({
       success: true,
-      data: invitation.training_modules.module_data,
+      data: modRow.module_data,
       completed: Boolean(invitation.completed_at),
     });
   } catch (error) {
@@ -356,5 +364,238 @@ export async function handleCompleteTrainingInvitation(req: Request, res: Respon
   } catch (error) {
     console.error('[Email formation] Confirmation échouée:', error);
     return res.status(503).json({ success: false, error: 'Impossible d’enregistrer la fin de formation' });
+  }
+}
+
+export async function handleSendTrainingInvitesBatch(req: AuthRequest, res: Response) {
+  const adminId = req.admin?.id;
+  if (!adminId) return res.status(401).json({ success: false, error: 'Non authentifié' });
+
+  const { employeeIds, module: trainingModule } = req.body as {
+    employeeIds?: string[];
+    module?: unknown;
+  };
+
+  if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
+    return res.status(400).json({ success: false, error: 'Sélection de collaborateurs vide ou invalide' });
+  }
+
+  if (!validTrainingModule(trainingModule)) {
+    return res.status(400).json({ success: false, error: 'Module de formation invalide' });
+  }
+
+  const moduleId = requiredText(trainingModule.id, 'Identifiant de formation', 120);
+  const moduleTitle = requiredText(trainingModule.title, 'Titre de formation', 120);
+  const duration = Number(trainingModule.durationMinutes ?? 4);
+
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME } = process.env;
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    return res.status(503).json({
+      success: false,
+      error: 'Service email indisponible : la configuration SMTP serveur est incomplète.',
+    });
+  }
+
+  try {
+    const database = getDatabase();
+    const allEmployees = await listEmployees(adminId);
+    const targets = allEmployees.filter((emp) => employeeIds.includes(emp.id));
+    if (targets.length === 0) {
+      return res.status(404).json({ success: false, error: 'Aucun collaborateur trouvé' });
+    }
+
+    const companyProfile = await getCompanyProfile(adminId);
+    const smtpPort = Number(SMTP_PORT || 587);
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      requireTLS: smtpPort !== 465,
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+
+    const moduleData = { ...trainingModule, id: moduleId, title: moduleTitle, durationMinutes: duration };
+    await database.from('training_modules').upsert({
+      admin_id: adminId,
+      id: moduleId,
+      title: moduleTitle,
+      module_data: moduleData,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'admin_id,id' });
+
+    const safeTitle = escapeHtml(moduleTitle);
+    const safeCompanyName = escapeHtml(companyProfile.companyName);
+    const isEnglish = companyProfile.preferredLanguage === 'en';
+    const safeBrandColor = /^#[0-9a-f]{6}$/i.test(companyProfile.brandColor) ? companyProfile.brandColor : '#f97316';
+    const fromName = escapeHtml(SMTP_FROM_NAME || 'VIGILO Formations');
+
+    const sendPromises = targets.map(async (emp) => {
+      if (!emp.email || !emp.email.includes('@')) return false;
+      const token = randomBytes(32).toString('hex');
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      try {
+        await database.from('training_invitations').insert({
+          id: randomUUID(),
+          admin_id: adminId,
+          module_id: moduleId,
+          token_hash: tokenHash,
+          expires_at: expiresAt,
+        });
+
+        const trainingUrl = publicAppUrl(req);
+        trainingUrl.searchParams.set('trainingInvite', token);
+        const safeFirstName = escapeHtml(emp.firstName);
+
+        await transporter.sendMail({
+          from: `"${fromName}" <${SMTP_USER}>`,
+          to: emp.email,
+          subject: `[${companyProfile.companyName}] ${isEnglish ? 'Training assigned' : 'Formation assignée'}: ${moduleTitle}`,
+          text: `${isEnglish ? 'Hello' : 'Bonjour'} ${emp.firstName},\n\n${companyProfile.companyName} ${isEnglish ? 'invites you to complete the training' : 'vous invite à suivre la micro-formation'} « ${moduleTitle} » (${duration} min).\n\n${isEnglish ? 'Open the training' : 'Ouvrir la formation'}: ${trainingUrl.toString()}`,
+          html: `<div style="font-family:Segoe UI,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-top:5px solid ${safeBrandColor};border-radius:8px;">
+  <p style="color:${safeBrandColor};font-weight:700;">${safeCompanyName}</p>
+  <p>${isEnglish ? 'Hello' : 'Bonjour'} ${safeFirstName},</p>
+  <p>${safeCompanyName} ${isEnglish ? 'invites you to complete the training' : 'vous invite à suivre la micro-formation'} <strong>${safeTitle}</strong> (${duration} min).</p>
+  <p><a href="${escapeHtml(trainingUrl.toString())}" style="background-color:${safeBrandColor};color:white;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">${isEnglish ? 'Open the training' : 'Ouvrir la formation'}</a></p>
+  <p style="font-size:11px;color:#94a3b8;margin-top:20px;">${isEnglish ? 'This is a VIGILO learning invitation.' : 'Cette invitation est un contenu pédagogique VIGILO.'}</p>
+</div>`,
+        });
+        return true;
+      } catch (err) {
+        console.error(`[Email formation batch] Erreur envoi à ${emp.email}:`, err);
+        return false;
+      }
+    });
+
+    const results = await Promise.allSettled(sendPromises);
+    transporter.close();
+    const sentCount = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
+    return res.json({
+      success: true,
+      sentCount,
+      failedCount: targets.length - sentCount,
+      message: `${sentCount} invitation(s) de formation envoyée(s) avec succès !`,
+    });
+  } catch (error) {
+    console.error('[Email formation batch] Échec:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Échec de l’envoi groupé',
+    });
+  }
+}
+
+export async function handleBroadcastFlashAlert(req: AuthRequest, res: Response) {
+  const adminId = req.admin?.id;
+  if (!adminId) return res.status(401).json({ success: false, error: 'Non authentifié' });
+
+  const { title, category, summary, content, keyTakeaway } = req.body as {
+    title?: string;
+    category?: string;
+    summary?: string;
+    content?: string;
+    keyTakeaway?: string;
+  };
+
+  if (!title || !content) {
+    return res.status(400).json({ success: false, error: 'Titre et contenu de l’alerte requis' });
+  }
+
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME } = process.env;
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    return res.status(503).json({
+      success: false,
+      error: 'Service email indisponible : SMTP non configuré sur le serveur.',
+    });
+  }
+
+  try {
+    const employees = await listEmployees(adminId);
+    if (!employees || employees.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Aucun collaborateur dans votre annuaire pour recevoir cette alerte.',
+      });
+    }
+
+    const companyProfile = await getCompanyProfile(adminId);
+    const smtpPort = Number(SMTP_PORT || 587);
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      requireTLS: smtpPort !== 465,
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+
+    const origin = publicAppUrl(req).toString().replace(/\/+$/, '');
+    const safeTitle = escapeHtml(title);
+    const safeSummary = escapeHtml(summary || title);
+    const safeContent = escapeHtml(content);
+    const safeTakeaway = escapeHtml(keyTakeaway || 'Toujours vérifier l’expéditeur avant toute action.');
+    const safeBrandColor = /^#[0-9a-f]{6}$/i.test(companyProfile.brandColor) ? companyProfile.brandColor : '#dc2626';
+    const fromName = escapeHtml(SMTP_FROM_NAME || 'VIGILO Alerte Sécurité');
+
+    const sendPromises = employees.map(async (emp) => {
+      if (!emp.email || !emp.email.includes('@')) return false;
+      const safeFirstName = escapeHtml(emp.firstName || '');
+      const ackUrl = `${origin}/?flashAck=true&empId=${encodeURIComponent(emp.id)}`;
+
+      const html = `<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-top:6px solid ${safeBrandColor};border-radius:8px;background:#ffffff;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+    <span style="background:#fee2e2;color:#b91c1c;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:bold;text-transform:uppercase;">🚨 ${escapeHtml(category || 'Alerte Urgente')}</span>
+    <span style="color:#64748b;font-size:12px;font-weight:600;">${escapeHtml(companyProfile.companyName)}</span>
+  </div>
+  <h2 style="color:#0f172a;margin-top:8px;margin-bottom:16px;font-size:18px;">${safeTitle}</h2>
+  <p style="color:#334155;font-size:14px;line-height:1.6;">Bonjour ${safeFirstName},</p>
+  <p style="color:#334155;font-size:14px;line-height:1.6;background:#f8fafc;padding:12px;border-left:3px solid #3b82f6;border-radius:4px;">${safeSummary}</p>
+  <div style="color:#334155;font-size:13px;line-height:1.6;margin:16px 0;white-space:pre-line;">${safeContent}</div>
+  <div style="background:#fef3c7;border:1px solid #fde68a;padding:12px;border-radius:6px;margin:16px 0;">
+    <strong style="color:#92400e;font-size:13px;display:block;margin-bottom:4px;">🛡️ Réflexe de sécurité immédiat :</strong>
+    <span style="color:#78350f;font-size:13px;">${safeTakeaway}</span>
+  </div>
+  <div style="text-align:center;margin-top:24px;">
+    <a href="${ackUrl}" style="background:#0f172a;color:#ffffff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;display:inline-block;">J'ai pris connaissance de cette alerte</a>
+  </div>
+  <p style="font-size:11px;color:#94a3b8;margin-top:24px;border-top:1px solid #f1f5f9;padding-top:12px;text-align:center;">Bulletin de sensibilisation diffusé par VIGILO pour ${escapeHtml(companyProfile.companyName)}.</p>
+</div>`;
+
+      try {
+        await transporter.sendMail({
+          from: `"${fromName}" <${SMTP_USER}>`,
+          to: emp.email,
+          subject: `🚨 [Alerte Sécurité] ${title}`,
+          text: `Bonjour ${emp.firstName},\n\nAlerte sécurité : ${title}\n\n${summary || ''}\n\n${content}\n\nRéflexe immédiat : ${keyTakeaway || ''}`,
+          html,
+        });
+        return true;
+      } catch (err) {
+        console.error(`[Alerte Flash] Erreur envoi à ${emp.email}:`, err);
+        return false;
+      }
+    });
+
+    const results = await Promise.allSettled(sendPromises);
+    transporter.close();
+    const sentCount = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
+    return res.json({
+      success: true,
+      sentCount,
+      totalTargets: employees.length,
+      message: `Alerte Flash diffusée avec succès à ${sentCount} collaborateur(s) par email !`,
+    });
+  } catch (error) {
+    console.error('[Alerte Flash] Erreur diffusion:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Échec de diffusion de l’alerte',
+    });
   }
 }

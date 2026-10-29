@@ -28,6 +28,28 @@ function requiredText(value: unknown, field: string, maxLength: number): string 
   return value.trim();
 }
 
+export function resolvePublicOrigin(req: Request): string {
+  if (req.body && typeof req.body.origin === 'string' && req.body.origin.startsWith('http')) {
+    return req.body.origin.replace(/\/+$/, '');
+  }
+  const headerOrigin = req.get('origin');
+  if (headerOrigin && headerOrigin.startsWith('http')) {
+    return headerOrigin.replace(/\/+$/, '');
+  }
+  const forwardedProto = req.get('x-forwarded-proto') || 'https';
+  const forwardedHost = req.get('x-forwarded-host') || req.get('host');
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`.replace(/\/+$/, '');
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`.replace(/\/+$/, '');
+  }
+  if (process.env.APP_URL && !process.env.APP_URL.includes('localhost')) {
+    return process.env.APP_URL.replace(/\/+$/, '');
+  }
+  return process.env.APP_URL || 'http://localhost:3000';
+}
+
 function mapCampaignRow(row: Record<string, unknown>) {
   const campaignData =
     row.campaign_data && typeof row.campaign_data === 'object' && !Array.isArray(row.campaign_data)
@@ -202,7 +224,7 @@ export async function handleCreateCampaignDraft(req: AuthRequest, res: Response)
 
     let emailsSent = 0;
     if (launchImmediately && sendRealEmails) {
-      const origin = req.get('origin') || process.env.APP_URL || 'http://localhost:3000';
+      const origin = resolvePublicOrigin(req);
       const emailRes = await sendCampaignEmails(
         adminId,
         employeeIds,
@@ -292,16 +314,18 @@ async function sendCampaignEmails(
       port: smtpPort,
       secure: smtpPort === 465,
       requireTLS: smtpPort !== 465,
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
     });
 
     const fromName = SMTP_FROM_NAME || 'VIGILO Sécurité';
-    let sent = 0;
 
-    for (const emp of emps) {
-      if (!emp.email || !emp.email.includes('@')) continue;
+    const sendPromises = emps.map(async (emp) => {
+      if (!emp.email || !emp.email.includes('@')) return false;
       const trapUrl = `${origin}/?trap=true&scenarioId=${encodeURIComponent(scenarioId)}&campaignId=${encodeURIComponent(campaignId)}&empId=${encodeURIComponent(emp.id)}`;
-      
+
       const emailHtml = (scenarioBody || `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
           <h2 style="color: #1e293b;">Notification de sécurité importante</h2>
@@ -323,12 +347,16 @@ async function sendCampaignEmails(
           subject: scenarioName || 'Notification urgente de sécurité',
           html: emailHtml,
         });
-        sent++;
+        return true;
       } catch (err) {
         console.error(`[Campagne Email] Erreur envoi à ${emp.email}:`, err);
+        return false;
       }
-    }
+    });
+
+    const results = await Promise.allSettled(sendPromises);
     transporter.close();
+    const sent = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
     return { sent };
   } catch (error) {
     console.error('[Campagnes] Échec envoi emails:', error);
@@ -378,7 +406,7 @@ export async function handleLaunchCampaign(req: AuthRequest, res: Response) {
 
     let emailsSent = 0;
     if (req.body.sendRealEmails === true) {
-      const origin = req.get('origin') || process.env.APP_URL || 'http://localhost:3000';
+      const origin = resolvePublicOrigin(req);
       const targetIds = Array.isArray(campaignData.targetEmployeeIds)
         ? (campaignData.targetEmployeeIds as string[])
         : [];
@@ -543,6 +571,170 @@ export async function handleSimulateCampaignEvent(req: AuthRequest, res: Respons
   } catch (error) {
     console.error('[Campagnes] Événement simulation échoué:', error);
     return res.status(500).json({ success: false, error: 'Erreur lors de la simulation' });
+  }
+}
+
+/**
+ * Public unauthenticated tracking endpoint for email trap clicks and reports
+ * Accessible by employees clicking links in simulated phishing emails
+ */
+export async function handlePublicCampaignEvent(req: Request, res: Response) {
+  const campaignId = (req.body?.campaignId || req.query.campaignId || req.params.id) as string;
+  const eventType = (req.body?.eventType || req.query.eventType || 'click') as 'open' | 'click' | 'report';
+  const employeeId = (req.body?.employeeId || req.query.empId || req.body?.empId) as string | undefined;
+  const scenarioId = (req.body?.scenarioId || req.query.scenarioId) as string | undefined;
+
+  if (!campaignId) {
+    return res.status(400).json({ success: false, error: 'Identifiant de campagne requis' });
+  }
+
+  try {
+    const database = getDatabase();
+    const campResult = await database
+      .from('campaigns')
+      .select('id,admin_id,name,status,targeted,delivered,opened,clicked,reported,campaign_data')
+      .eq('id', campaignId)
+      .maybeSingle();
+
+    const existing = unwrapDatabaseResult('lecture campagne publique', campResult) as Record<string, unknown> | null;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Campagne introuvable' });
+    }
+
+    const adminId = String(existing.admin_id);
+    let targeted = Math.max(1, Number(existing.targeted) || 1);
+    let delivered = Math.max(targeted, Number(existing.delivered) || targeted);
+    let opened = Number(existing.opened) || 0;
+    let clicked = Number(existing.clicked) || 0;
+    let reported = Number(existing.reported) || 0;
+    const campaignData = (existing.campaign_data as Record<string, unknown>) || {};
+    let depts = Array.isArray(campaignData.departments) ? [...campaignData.departments] : [];
+
+    if (eventType === 'open') {
+      opened = Math.min(delivered, opened + 1);
+    } else if (eventType === 'click') {
+      clicked = clicked + 1;
+      opened = Math.max(opened, clicked);
+    } else if (eventType === 'report') {
+      reported = reported + 1;
+    }
+
+    let targetDeptId: string | undefined;
+    if (employeeId) {
+      try {
+        const empRes = await database
+          .from('employees')
+          .select('id, department_id, risk_score')
+          .eq('admin_id', adminId)
+          .eq('id', employeeId)
+          .maybeSingle();
+        const emp = unwrapDatabaseResult('lecture collaborateur', empRes) as {
+          id: string;
+          department_id: string;
+          risk_score: number;
+        } | null;
+
+        if (emp) {
+          targetDeptId = emp.department_id;
+          const newRisk = eventType === 'click'
+            ? Math.min(100, (emp.risk_score || 50) + 12)
+            : eventType === 'report'
+              ? Math.max(5, (emp.risk_score || 50) - 8)
+              : emp.risk_score;
+
+          await database
+            .from('employees')
+            .update({ risk_score: newRisk, updated_at: new Date().toISOString() })
+            .eq('admin_id', adminId)
+            .eq('id', employeeId);
+        }
+      } catch (empErr) {
+        console.warn('[Campagne Event] Impossible d’ajuster le score collaborateur:', empErr);
+      }
+    }
+
+    if (targetDeptId && depts.length > 0) {
+      depts = depts.map((d: any) => {
+        if (d.id === targetDeptId) {
+          const dOpened = eventType === 'open' || eventType === 'click' ? (Number(d.opened) || 0) + 1 : Number(d.opened) || 0;
+          const dClicked = eventType === 'click' ? (Number(d.clicked) || 0) + 1 : Number(d.clicked) || 0;
+          const dReported = eventType === 'report' ? (Number(d.reported) || 0) + 1 : Number(d.reported) || 0;
+          const dTargeted = Math.max(1, Number(d.targeted) || 1);
+          return {
+            ...d,
+            opened: Math.min(dTargeted, dOpened),
+            clicked: dClicked,
+            reported: dReported,
+            clickRate: Math.min(100, Math.round((dClicked / dTargeted) * 100)),
+            reportRate: Math.min(100, Math.round((dReported / dTargeted) * 100)),
+          };
+        }
+        return d;
+      });
+    }
+
+    try {
+      await database.from('campaign_events').insert({
+        id: randomUUID(),
+        admin_id: adminId,
+        campaign_id: campaignId,
+        event_type: eventType === 'click' ? 'clicked' : eventType === 'report' ? 'reported' : 'opened',
+        participant_ref: employeeId || 'public-click',
+        occurred_at: new Date().toISOString(),
+      });
+    } catch (eventErr) {
+      console.warn('[Campagne Event] Insertion campaign_events non bloquante:', eventErr);
+    }
+
+    const updatedCampaignData = {
+      ...campaignData,
+      departments: depts,
+      lastEventAt: new Date().toISOString(),
+      lastEventType: eventType,
+    };
+
+    const updateRes = await database
+      .from('campaigns')
+      .update({
+        status: existing.status === 'brouillon' ? 'en_cours' : existing.status,
+        opened,
+        clicked,
+        reported,
+        campaign_data: updatedCampaignData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', campaignId)
+      .eq('admin_id', adminId)
+      .select('id,name,status,targeted,delivered,opened,clicked,reported,campaign_data,created_at')
+      .single();
+
+    const updatedRow = unwrapDatabaseResult('mise a jour campagne suite événement', updateRes) as Record<string, unknown>;
+    const clickRate = Math.min(100, Math.round((clicked / (delivered || 1)) * 100));
+
+    if (req.method === 'GET') {
+      const origin = resolvePublicOrigin(req);
+      const redirectUrl = `${origin}/?trap=true&campaignId=${encodeURIComponent(campaignId)}${scenarioId ? `&scenarioId=${encodeURIComponent(scenarioId)}` : ''}${employeeId ? `&empId=${encodeURIComponent(employeeId)}` : ''}`;
+      return res.redirect(redirectUrl);
+    }
+
+    return res.json({
+      success: true,
+      data: mapCampaignRow(updatedRow),
+      clicked,
+      opened,
+      reported,
+      clickRate,
+    });
+  } catch (error) {
+    console.error('[Campagne Event Public] Erreur enregistrement:', error);
+    if (req.method === 'GET') {
+      const origin = resolvePublicOrigin(req);
+      return res.redirect(`${origin}/?trap=true`);
+    }
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur enregistrement événement',
+    });
   }
 }
 

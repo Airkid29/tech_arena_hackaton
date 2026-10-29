@@ -23,11 +23,11 @@ function handleAuthError(res: Response, error: unknown) {
         : 500;
   if (status >= 500) console.error('[Auth] Requête échouée:', error);
   const message =
-    status < 500 && error instanceof Error
+    error instanceof Error
       ? error.message
       : status === 503
         ? 'Base de données indisponible ou non configurée'
-        : 'Erreur serveur';
+        : 'Erreur d’authentification serveur';
   return res.status(status).json({ success: false, error: message });
 }
 
@@ -50,7 +50,7 @@ export async function handleRegister(req: AuthRequest, res: Response) {
     });
     const token = signSession(admin);
     setSessionCookie(res, token);
-    return res.status(201).json({ success: true, data: admin });
+    return res.status(201).json({ success: true, data: admin, token });
   } catch (error) {
     return handleAuthError(res, error);
   }
@@ -69,7 +69,7 @@ export async function handleLogin(req: AuthRequest, res: Response) {
     }
     const token = signSession(admin);
     setSessionCookie(res, token);
-    return res.json({ success: true, data: admin });
+    return res.json({ success: true, data: admin, token });
   } catch (error) {
     return handleAuthError(res, error);
   }

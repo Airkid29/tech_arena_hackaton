@@ -308,13 +308,21 @@ export default function App() {
     if (params.get('trap') === 'true') {
       const scenId = params.get('scenarioId');
       const campId = params.get('campaignId');
+      const empId = params.get('empId');
       const scen = INITIAL_SCENARIOS.find(s => s.id === scenId || s.category === scenId) || INITIAL_SCENARIOS[0];
       setSimulatedScenario(scen);
       setSimulatorInitialViewState('landing_page_clicked');
       setIsEmployeeSimulatorOpen(true);
       if (campId) {
-        void vigiloCampaignService.simulateCampaignEvent(campId, 'click').then((updated) => {
-          setCampaigns((prev) => prev.map((c) => (c.id === campId ? updated : c)));
+        void vigiloCampaignService.trackPublicEvent({
+          campaignId: campId,
+          eventType: 'click',
+          employeeId: empId || undefined,
+          scenarioId: scenId || undefined,
+        }).then((res) => {
+          if (res.success && res.data) {
+            setCampaigns((prev) => prev.map((c) => (c.id === campId ? (res.data as Campaign) : c)));
+          }
         }).catch(() => {});
       }
       // Clean URL
@@ -487,7 +495,11 @@ export default function App() {
       targetModule = trainings.find((t) => t.category === 'WhatsApp Phishing') || trainings[0];
     }
 
-    setViewMode('app');
+    if (!admin) {
+      setViewMode('trap-training');
+    } else {
+      setViewMode('app');
+    }
     setActiveInteractiveTraining(targetModule);
   };
 
@@ -539,61 +551,48 @@ export default function App() {
     }
     const origin = window.location.origin;
     const assignedAt = new Date().toISOString();
-    const sentEmployees: Employee[] = [];
-    let sendError = '';
 
-    for (const emp of targets) {
-      try {
-        const sent = await vigiloTrainingService.sendTrainingInvite({
-          email: emp.email,
-          firstName: emp.firstName,
-          module: mod,
-          origin,
-        });
-        if (!sent) throw new Error('Le serveur n’a pas confirmé l’envoi.');
-        sentEmployees.push(emp);
-      } catch (error) {
-        sendError = error instanceof Error ? error.message : 'Échec de l’envoi email.';
-        break;
+    try {
+      const res = await vigiloTrainingService.sendTrainingInvitesBatch({
+        employeeIds: targets.map((e) => e.id),
+        module: mod,
+        origin,
+      });
+
+      if (res.sentCount > 0) {
+        setTrainings((prev) =>
+          prev.map((t) =>
+            t.id === moduleId ? { ...t, totalAssigned: t.totalAssigned + res.sentCount } : t
+          )
+        );
+
+        const targetIds = new Set(targets.slice(0, res.sentCount).map((e) => e.id));
+        setEmployees((prev) =>
+          prev.map((emp) => {
+            if (!targetIds.has(emp.id)) return emp;
+            const entry = {
+              moduleId: mod.id,
+              moduleTitle: mod.title,
+              assignedAt,
+              channel,
+              status: 'envoyé' as const,
+            };
+            return {
+              ...emp,
+              trainingAssignments: [entry, ...(emp.trainingAssignments || [])],
+            };
+          })
+        );
+        return { success: true, sentCount: res.sentCount };
       }
-    }
-
-    if (sentEmployees.length > 0) {
-      setTrainings((prev) =>
-        prev.map((t) =>
-          t.id === moduleId ? { ...t, totalAssigned: t.totalAssigned + sentEmployees.length } : t
-        )
-      );
-
-      const sentIds = new Set(sentEmployees.map((employee) => employee.id));
-      setEmployees((prev) =>
-        prev.map((emp) => {
-          if (!sentIds.has(emp.id)) return emp;
-          const entry = {
-            moduleId: mod.id,
-            moduleTitle: mod.title,
-            assignedAt,
-            channel,
-            status: 'envoyé' as const,
-          };
-          return {
-            ...emp,
-            trainingAssignments: [...(emp.trainingAssignments || []), entry],
-          };
-        })
-      );
-    }
-
-    if (sendError) {
+      return { success: false, sentCount: 0, error: 'Aucun email d’invitation n’a pu être envoyé.' };
+    } catch (error) {
       return {
         success: false,
-        sentCount: sentEmployees.length,
-        error: sentEmployees.length
-          ? `${sentEmployees.length} invitation(s) envoyée(s), puis arrêt après un échec : ${sendError}`
-          : sendError,
+        sentCount: 0,
+        error: error instanceof Error ? error.message : 'Échec de l’envoi des invitations.',
       };
     }
-    return { success: sentEmployees.length > 0, sentCount: sentEmployees.length };
   };
 
   // Flash News Handlers
@@ -664,6 +663,28 @@ export default function App() {
               }}
             />
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (viewMode === 'trap-training' && activeInteractiveTraining) {
+    const leaveTrapTraining = () => {
+      setActiveInteractiveTraining(null);
+      setViewMode('landing');
+    };
+
+    return (
+      <div className={isDark ? 'dark' : ''} data-vigilo-theme={theme}>
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)] text-[var(--foreground)] p-4">
+          <InteractiveTrainingPlayer
+            module={activeInteractiveTraining}
+            onClose={leaveTrapTraining}
+            onComplete={() => {
+              handleTrainingCompleted(activeInteractiveTraining.id);
+            }}
+            onNavigateToReTest={leaveTrapTraining}
+          />
         </div>
       </div>
     );

@@ -35,6 +35,8 @@ import {
   handleCompleteTrainingInvitation,
   handleGetTrainingInvitation,
   handleSendTrainingInvite,
+  handleSendTrainingInvitesBatch,
+  handleBroadcastFlashAlert,
 } from './server/emailRoutes';
 import { handleGophishCampaigns } from './server/gophishRoutes';
 import {
@@ -44,6 +46,7 @@ import {
   handleSimulateCampaignEvent,
   handleCompleteCampaign,
   handleSendLiveTest,
+  handlePublicCampaignEvent,
 } from './server/campaignRoutes';
 
 dotenv.config();
@@ -51,6 +54,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
+app.set('trust proxy', 1);
 const PORT = Number(process.env.PORT || 3000);
 
 app.disable('x-powered-by');
@@ -74,7 +78,9 @@ function createRateLimiter(limit: number, windowMs: number, keyPrefix: string) {
   const entries = new Map<string, { count: number; resetAt: number }>();
   return (req: Request, res: Response, next: NextFunction) => {
     const now = Date.now();
-    const identity = (req as AuthRequest).admin?.id || req.ip || 'unknown';
+    const forwarded = req.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : req.ip;
+    const identity = (req as AuthRequest).admin?.id || (req.body?.email ? `email:${req.body.email}` : ip) || 'unknown';
     const key = `${keyPrefix}:${identity}`;
     const current = entries.get(key);
     if (!current || current.resetAt <= now) {
@@ -96,10 +102,9 @@ function createRateLimiter(limit: number, windowMs: number, keyPrefix: string) {
   };
 }
 
-app.post('/api/auth/register', createRateLimiter(5, 60 * 60 * 1000, 'register'), handleRegister);
-app.post('/api/auth/login', createRateLimiter(10, 15 * 60 * 1000, 'login'), handleLogin);
+app.post('/api/auth/register', createRateLimiter(50, 60 * 60 * 1000, 'register'), handleRegister);
+app.post('/api/auth/login', createRateLimiter(100, 15 * 60 * 1000, 'login'), handleLogin);
 app.post('/api/auth/logout', handleLogout);
-app.get('/api/auth/me', requireAuth, handleMe);
 
 app.get('/api/health', (_req: Request, res: Response) => {
   const providers = [
@@ -118,11 +123,18 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
+// PUBLIC ROUTES (No admin login needed - accessible by employees from email links)
 app.get('/api/public/training-invitations/:token', handleGetTrainingInvitation);
 app.post('/api/public/training-invitations/:token/complete', handleCompleteTrainingInvitation);
 
+// Campaign email tracking (opens, real clicks, reports)
+app.post('/api/public/campaign-event', handlePublicCampaignEvent);
+app.get('/api/public/campaign-event', handlePublicCampaignEvent);
+app.post('/api/public/track-click', handlePublicCampaignEvent);
+app.get('/api/public/trap', handlePublicCampaignEvent);
+
 app.use('/api', (req, res, next) => {
-  if (req.path === '/health') return next();
+  if (req.path === '/health' || req.path.startsWith('/public/')) return next();
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     const origin = req.get('origin');
     let originHost: string | null = null;
@@ -131,13 +143,20 @@ app.use('/api', (req, res, next) => {
     } catch {
       originHost = null;
     }
-    if (!originHost || originHost !== req.get('host')) {
-      res.status(403).json({ success: false, error: 'Origine de requête invalide' });
-      return;
+    const host = req.get('host');
+    const forwardedHost = req.get('x-forwarded-host');
+    if (originHost && originHost !== host && originHost !== forwardedHost) {
+      const isAllowedHost = originHost.endsWith('.vercel.app') || originHost.includes('localhost') || originHost.includes('127.0.0.1');
+      if (!isAllowedHost) {
+        res.status(403).json({ success: false, error: 'Origine de requête invalide' });
+        return;
+      }
     }
   }
   return requireAuth(req as AuthRequest, res, next);
 });
+
+app.get('/api/auth/me', requireAuth, handleMe);
 
 app.get('/api/org/summary', handleOrgSummary);
 app.get('/api/org/profile', handleGetCompanyProfile);
@@ -167,9 +186,11 @@ app.post('/api/rodium-ai/analyze-results', aiRateLimit, handleAnalyzeResults);
 app.post('/api/vigilo-ai/generate-training', aiRateLimit, handleGenerateTraining);
 app.post('/api/rodium-ai/generate-training', aiRateLimit, handleGenerateTraining);
 
-app.post('/api/send-training-invite', createRateLimiter(20, 60 * 60 * 1000, 'training-invite'), handleSendTrainingInvite);
+app.post('/api/send-training-invite', createRateLimiter(50, 60 * 60 * 1000, 'training-invite'), handleSendTrainingInvite);
+app.post('/api/send-training-invites-batch', createRateLimiter(50, 60 * 60 * 1000, 'training-batch'), handleSendTrainingInvitesBatch);
+app.post('/api/flash-news/broadcast', createRateLimiter(30, 60 * 60 * 1000, 'flash-broadcast'), handleBroadcastFlashAlert);
 app.get('/api/integrations/gophish/campaigns', handleGophishCampaigns);
-app.post('/api/send-live-test', createRateLimiter(20, 15 * 60 * 1000, 'live-test'), handleSendLiveTest);
+app.post('/api/send-live-test', createRateLimiter(50, 15 * 60 * 1000, 'live-test'), handleSendLiveTest);
 
 app.use('/api', (_req: Request, res: Response) => {
   res.status(404).json({ success: false, error: 'Route API introuvable' });
