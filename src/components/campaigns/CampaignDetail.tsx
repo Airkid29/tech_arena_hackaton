@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
-  Users,
   Send,
-  MousePointerClick,
   ShieldCheck,
   Sparkles,
   Play,
@@ -11,10 +9,9 @@ import {
   GraduationCap,
   Eye,
   AlertTriangle,
-  Building,
   CheckCircle2,
-  Clock,
   RefreshCw,
+  X,
 } from 'lucide-react';
 import { Campaign, AIAnalysis } from '../../types';
 import { rodiumAiService } from '../../services/api';
@@ -33,6 +30,56 @@ interface CampaignDetailProps {
   trainingGenerationError?: string;
 }
 
+const STATUS_LABEL: Record<Campaign['status'], string> = {
+  brouillon: 'Brouillon — non envoyé',
+  planifiée: 'Planifiée',
+  en_cours: 'En cours',
+  terminée: 'Terminée',
+};
+
+const clampPct = (value: number) => Math.max(0, Math.min(100, Number(value) || 0));
+
+/** Coque commune des fenêtres de confirmation (Échap et clic sur le fond ferment, sauf pendant une action). */
+const ModalShell: React.FC<{
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  busy?: boolean;
+  children: React.ReactNode;
+}> = ({ title, subtitle, onClose, busy = false, children }) => (
+  <div
+    data-vigilo-modal
+    className="fixed inset-0 z-50 flex items-center justify-center bg-kori-bg/80 p-4"
+    onMouseDown={(e) => {
+      if (e.target === e.currentTarget && !busy) onClose();
+    }}
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="w-full max-w-md rounded-2xl border border-kori-line bg-kori-surface p-6 space-y-4 shadow-[0_24px_64px_rgb(0_0_0/0.35)]"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-display text-lg text-kori-text">{title}</h3>
+          {subtitle && <p className="text-xs text-kori-muted truncate mt-0.5">{subtitle}</p>}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={busy}
+          aria-label="Fermer"
+          className="p-1.5 rounded-lg vigilo-chrome-btn cursor-pointer disabled:opacity-40"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      {children}
+    </div>
+  </div>
+);
+
 export const CampaignDetail: React.FC<CampaignDetailProps> = ({
   campaign,
   onBack,
@@ -49,12 +96,26 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState('');
   const [showLaunchModal, setShowLaunchModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [launchWithRealEmails, setLaunchWithRealEmails] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
   const [launchError, setLaunchError] = useState('');
   const [isSimulating, setIsSimulating] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Échap ferme la fenêtre ouverte, sauf pendant une action en cours
+  useEffect(() => {
+    if (!showLaunchModal && !showCompleteModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (showLaunchModal && !isLaunching) setShowLaunchModal(false);
+      if (showCompleteModal && !isCompleting) setShowCompleteModal(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showLaunchModal, showCompleteModal, isLaunching, isCompleting]);
 
   const handleConfirmLaunch = async () => {
     if (!onLaunchCampaign) return;
@@ -63,7 +124,7 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
     try {
       await onLaunchCampaign(campaign, { sendRealEmails: launchWithRealEmails });
       setShowLaunchModal(false);
-      setActionFeedback('🚀 Campagne lancée avec succès !');
+      setActionFeedback('Campagne lancée avec succès.');
       setTimeout(() => setActionFeedback(null), 4000);
     } catch (err) {
       setLaunchError(err instanceof Error ? err.message : 'Erreur lors du lancement');
@@ -75,33 +136,36 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
   const handleSimulateEvent = async (eventType: 'open' | 'click' | 'report' | 'auto_cohort') => {
     if (!onSimulateEvent) return;
     setIsSimulating(true);
+    setActionError(null);
     try {
       await onSimulateEvent(campaign.id, eventType);
       const msg = {
-        open: '👁️ Simulation : 1 collaborateur a ouvert le courriel.',
-        click: '⚠️ Simulation : 1 collaborateur a cliqué sur le piège !',
-        report: '🛡️ Simulation : 1 collaborateur a signalé l’email suspect !',
-        auto_cohort: '📊 Simulation complète de cohorte générée avec succès !',
+        open: 'Simulation : 1 collaborateur a ouvert le courriel.',
+        click: 'Simulation : 1 collaborateur a cliqué sur le piège.',
+        report: 'Simulation : 1 collaborateur a signalé l’email suspect.',
+        auto_cohort: 'Simulation complète de cohorte générée avec succès.',
       }[eventType];
       setActionFeedback(msg);
       setTimeout(() => setActionFeedback(null), 3500);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur de simulation');
+      setActionError(err instanceof Error ? err.message : 'Erreur de simulation');
     } finally {
       setIsSimulating(false);
     }
   };
 
-  const handleComplete = async () => {
+  const handleConfirmComplete = async () => {
     if (!onCompleteCampaign) return;
-    if (!window.confirm('Voulez-vous clôturer cette campagne ? Elle sera marquée comme terminée et disponible pour l’analyse IA et le re-test.')) return;
     setIsCompleting(true);
+    setActionError(null);
     try {
       await onCompleteCampaign(campaign.id);
-      setActionFeedback('✅ Campagne clôturée avec succès.');
+      setShowCompleteModal(false);
+      setActionFeedback('Campagne clôturée avec succès.');
       setTimeout(() => setActionFeedback(null), 3500);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la clôture');
+      setShowCompleteModal(false);
+      setActionError(err instanceof Error ? err.message : 'Erreur lors de la clôture');
     } finally {
       setIsCompleting(false);
     }
@@ -120,13 +184,32 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
     }
   };
 
+  const analysisBlocked = isAnalyzing || campaign.status === 'brouillon' || campaign.delivered === 0;
+  const hasResults = campaign.delivered > 0;
+  const statusClass =
+    campaign.status === 'en_cours'
+      ? 'vigilo-pill-orange'
+      : campaign.status === 'brouillon'
+        ? 'border-dashed border-kori-line bg-transparent text-kori-muted'
+        : 'border-kori-line bg-kori-chip text-kori-muted';
+
+  const supportingStats = [
+    { label: 'Taux de clic', value: `${campaign.clickRate}%`, tone: 'text-kori-negative' },
+    { label: 'Ciblés', value: campaign.targeted, tone: 'text-kori-text' },
+    { label: 'Délivrés', value: campaign.delivered, tone: 'text-kori-text' },
+    { label: 'Ouverts', value: campaign.opened, tone: 'text-kori-text' },
+    { label: 'Clics (piégés)', value: campaign.clicked, tone: 'text-kori-negative' },
+    { label: 'Signalements', value: campaign.reported, tone: 'text-kori-positive' },
+  ];
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Top Navigation & Status */}
+      {/* Navigation et actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <button
+          type="button"
           onClick={onBack}
-          className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer self-start"
+          className="flex items-center gap-2 text-sm text-kori-muted hover:text-kori-text transition-colors cursor-pointer self-start"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Retour aux campagnes</span>
@@ -135,27 +218,33 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           {campaign.status === 'brouillon' && onLaunchCampaign && (
             <button
-              onClick={() => setShowLaunchModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#f2620a] hover:bg-[#e05606] text-white text-xs font-bold shadow-lg shadow-[#f2620a]/30 transition-all cursor-pointer"
+              type="button"
+              onClick={() => {
+                setLaunchError('');
+                setShowLaunchModal(true);
+              }}
+              className="vigilo-btn-orange flex items-center gap-1.5 px-4 py-2 text-xs cursor-pointer"
             >
-              <Play className="w-3.5 h-3.5 fill-white" />
+              <Play className="w-3.5 h-3.5 fill-current" />
               <span>Lancer la campagne</span>
             </button>
           )}
 
           <button
+            type="button"
             onClick={() => onSimulate(campaign)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 cursor-pointer"
+            className="vigilo-btn-secondary flex items-center gap-1.5 px-3.5 py-2 text-xs cursor-pointer"
             title="Aperçu interactif du scénario"
           >
-            <Eye className="w-3.5 h-3.5 text-blue-400" />
+            <Eye className="w-3.5 h-3.5" />
             <span>Aperçu piège</span>
           </button>
 
           <button
+            type="button"
             onClick={() => onPrepareTrainingInvite(campaign)}
             disabled={isGeneratingTraining}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 text-xs font-medium border border-orange-500/40 disabled:opacity-50 cursor-pointer"
+            className="vigilo-btn-secondary flex items-center gap-1.5 px-3.5 py-2 text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             title="Générer une formation à relire, puis confirmer l’envoi d’une invitation pédagogique aux collaborateurs ciblés."
           >
             <Send className="w-3.5 h-3.5" />
@@ -164,10 +253,11 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
 
           {campaign.status === 'terminée' && (
             <button
+              type="button"
               onClick={() => onLaunchReTest(campaign)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-medium border border-emerald-500/40 cursor-pointer"
+              className="vigilo-btn-secondary flex items-center gap-1.5 px-3.5 py-2 text-xs cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
+              <RotateCcw className="w-3.5 h-3.5" />
               <span>Créer un re-test</span>
             </button>
           )}
@@ -175,384 +265,396 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({
       </div>
 
       {actionFeedback && (
-        <div role="status" className="p-3 rounded-xl border border-emerald-500/40 bg-emerald-950/40 text-xs font-semibold text-emerald-300 flex items-center gap-2 animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div
+          role="status"
+          className="p-3 rounded-xl border border-kori-line bg-kori-surface text-sm font-medium text-kori-positive flex items-center gap-2"
+        >
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{actionFeedback}</span>
         </div>
       )}
 
-      {trainingGenerationError && (
-        <p role="alert" className="rounded-lg border border-red-500/40 bg-red-950/30 px-3 py-2 text-xs text-red-200">
-          {trainingGenerationError}
-        </p>
+      {(actionError || trainingGenerationError) && (
+        <div
+          role="alert"
+          className="rounded-xl border border-kori-negative/40 bg-kori-negative/10 px-3.5 py-2.5 text-sm text-kori-negative flex items-start justify-between gap-3"
+        >
+          <span>{actionError || trainingGenerationError}</span>
+          {actionError && (
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              aria-label="Masquer l’erreur"
+              className="shrink-0 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       )}
 
-      {/* Campaign Header Card */}
-      <div className="p-6 rounded-xl border border-slate-800 bg-[#0d131f] space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${
-                  campaign.status === 'en_cours'
-                    ? 'bg-blue-950/80 text-blue-400 border-blue-800/60'
-                    : 'bg-slate-900 text-slate-400 border-slate-800'
-                }`}
-              >
-                {{
-                  brouillon: 'Brouillon — non envoyé',
-                  planifiée: 'Planifiée',
-                  en_cours: '● En cours',
-                  terminée: '✓ Terminée',
-                }[campaign.status]}
-              </span>
-              <span className="text-xs text-slate-400">·</span>
-              <span className="text-xs font-mono text-slate-400">{campaign.category}</span>
-              <span className="text-xs text-slate-400">·</span>
-              <span className="text-xs text-slate-400">Difficulté : {campaign.difficulty}</span>
-              <span className="text-xs text-slate-400">·</span>
-              <span className="text-xs text-slate-400">Cible : {campaign.targetGroup}</span>
+      {/* En-tête de la campagne */}
+      <section className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div className="space-y-3 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-kori-muted">
+              <span className={`vigilo-pill text-[11px] ${statusClass}`}>{STATUS_LABEL[campaign.status]}</span>
+              <span>{campaign.category}</span>
+              <span aria-hidden="true">·</span>
+              <span>Difficulté : {campaign.difficulty}</span>
+              <span aria-hidden="true">·</span>
+              <span>Cible : {campaign.targetGroup}</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">{campaign.name}</h1>
-            <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
-              {campaign.description}
-            </p>
+            <h1 className="font-display text-2xl sm:text-3xl tracking-tight text-kori-text">{campaign.name}</h1>
+            <p className="text-sm text-kori-muted max-w-3xl leading-relaxed">{campaign.description}</p>
             {campaign.status === 'brouillon' && (
-              <p className="text-xs text-amber-300 font-medium">
+              <p className="text-sm text-kori-text">
                 Campagne en statut Brouillon : prête à être lancée auprès des {campaign.targeted} collaborateur(s) ciblés.
               </p>
             )}
             {campaign.status === 'en_cours' && (
-              <p className="text-xs text-emerald-400 font-medium flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span>Campagne en cours d&apos;exécution · Suivi live des réactions</span>
+              <p className="text-sm text-kori-positive font-medium flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-kori-positive" aria-hidden="true" />
+                <span>Campagne en cours d&apos;exécution · Suivi des réactions</span>
               </p>
             )}
           </div>
 
           <div className="text-left md:text-right shrink-0">
-            <div className="text-xs text-slate-400">Temps médian de réaction mesuré</div>
-            <div className="text-xl font-bold font-mono text-slate-200">
+            <div className="text-xs text-kori-muted">Temps médian de réaction mesuré</div>
+            <div className="font-display text-2xl text-kori-text">
               {campaign.medianReactionTimeMinutes ? `${campaign.medianReactionTimeMinutes} min` : '—'}
             </div>
           </div>
         </div>
 
-        {/* Live Simulation Cockpit (for Hackathon / ANCy Jury Demo) */}
+        {/* Cockpit de simulation (actions existantes, simplement restylées) */}
         {campaign.status === 'en_cours' && onSimulateEvent && (
-          <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-950/20 backdrop-blur-sm space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <h3 className="text-sm font-bold text-emerald-300">
-                  Cockpit de Simulation en Direct (Démo Jury ANCy)
-                </h3>
-              </div>
-              <span className="text-[11px] font-mono text-emerald-400/80">
+          <div className="rounded-2xl border border-dashed border-kori-line bg-kori-input p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-kori-text">
+                Cockpit de simulation en direct (démo jury ANCy)
+              </h3>
+              <span className="text-xs text-kori-muted">
                 {campaign.delivered} leurres distribués · Taux de clic actuel : {campaign.clickRate}%
               </span>
             </div>
-            <p className="text-xs text-slate-300">
-              Déclenchez les interactions des collaborateurs en direct pour simuler les comportements face au piège et observer les indicateurs réagir en temps réel :
+            <p className="text-xs text-kori-muted">
+              Déclenchez les interactions des collaborateurs en direct pour simuler les comportements face au piège et observer les indicateurs réagir :
             </p>
-            <div className="flex flex-wrap items-center gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-2">
               <button
+                type="button"
                 onClick={() => handleSimulateEvent('click')}
                 disabled={isSimulating}
-                className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                className="vigilo-btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>+1 Clic piégé</span>
+                <AlertTriangle className="w-3.5 h-3.5 text-kori-negative" />
+                <span>+1 clic piégé</span>
               </button>
               <button
+                type="button"
                 onClick={() => handleSimulateEvent('report')}
                 disabled={isSimulating}
-                className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                className="vigilo-btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>+1 Signalement défensif</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-kori-positive" />
+                <span>+1 signalement défensif</span>
               </button>
               <button
+                type="button"
                 onClick={() => handleSimulateEvent('auto_cohort')}
                 disabled={isSimulating}
-                className="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                className="vigilo-btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Simuler résultats complets</span>
               </button>
               {onCompleteCampaign && (
                 <button
-                  onClick={handleComplete}
+                  type="button"
+                  onClick={() => setShowCompleteModal(true)}
                   disabled={isCompleting}
-                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/20 text-xs font-semibold flex items-center gap-1.5 sm:ml-auto transition-all cursor-pointer disabled:opacity-40"
+                  className="vigilo-btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 sm:ml-auto cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Clôturer la campagne</span>
                 </button>
               )}
             </div>
           </div>
         )}
+      </section>
 
-        {/* 7 Core Indicators per Section 5 */}
-        <div className="pt-4 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-center">
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-            <div className="text-xs text-slate-400">Ciblés</div>
-            <div className="text-xl font-bold font-mono text-white mt-1">{campaign.targeted}</div>
-          </div>
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-            <div className="text-xs text-slate-400">Délivrés</div>
-            <div className="text-xl font-bold font-mono text-slate-200 mt-1">{campaign.delivered}</div>
-          </div>
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-            <div className="text-xs text-slate-400">Ouverts</div>
-            <div className="text-xl font-bold font-mono text-slate-200 mt-1">{campaign.opened}</div>
-          </div>
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-            <div className="text-xs text-red-400">Clics (Piégés)</div>
-            <div className="text-xl font-bold font-mono text-red-400 mt-1">{campaign.clicked}</div>
-          </div>
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-            <div className="text-xs text-emerald-400">Signalements</div>
-            <div className="text-xl font-bold font-mono text-emerald-400 mt-1">{campaign.reported}</div>
-          </div>
-          <div className="p-3 rounded-lg bg-red-950/20 border border-red-900/40">
-            <div className="text-xs text-red-300 font-medium">Click Rate</div>
-            <div className="text-xl font-bold font-mono text-red-400 mt-1">{campaign.clickRate}%</div>
-          </div>
-          <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-900/40">
-            <div className="text-xs text-emerald-300 font-medium">Report Rate</div>
-            <div className="text-xl font-bold font-mono text-emerald-400 mt-1">{campaign.reportRate}%</div>
+      {/* Indicateurs : métrique principale + indicateurs de support */}
+      <section className="vigilo-card grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] overflow-hidden">
+        <div className="p-6 sm:p-8 flex flex-col justify-between gap-6">
+          <p className="text-sm font-medium text-kori-muted">Taux de signalement</p>
+          <div>
+            <div
+              className={`font-display text-6xl sm:text-7xl tracking-tight ${
+                hasResults ? 'text-kori-positive' : 'text-kori-muted'
+              }`}
+            >
+              {campaign.reportRate}%
+            </div>
+            <p className="mt-2 text-xs text-kori-muted">
+              {campaign.reported} signalement(s) sur {campaign.targeted} ciblé(s)
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Two columns: Department breakdown & AI Coach */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-kori-line border-t lg:border-t-0 lg:border-l border-kori-line">
+          {supportingStats.map((stat) => (
+            <div key={stat.label} className="bg-kori-surface p-5 space-y-1.5">
+              <div className="text-xs text-kori-muted">{stat.label}</div>
+              <div className={`font-display text-2xl ${stat.tone}`}>{stat.value}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Départements + Coach IA */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left column (5 cols): Department Breakdown */}
-        <div className="lg:col-span-5 p-6 rounded-xl border border-slate-800 bg-[#0d131f] space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Building className="w-4 h-4 text-blue-400" />
-              <span>Ventilation par département</span>
-            </h3>
-            <span className="text-[11px] text-slate-400 font-mono">
-              {campaign.departments.length} équipes
-            </span>
+        <section className="lg:col-span-5 vigilo-card p-6 space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-base font-semibold text-kori-text">Ventilation par département</h3>
+            <span className="text-xs text-kori-muted">{campaign.departments.length} équipes</span>
           </div>
 
-          <div className="space-y-3">
-            {campaign.departments.map((dept) => (
-              <div
-                key={dept.name}
-                className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 space-y-2 text-xs"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-slate-200">{dept.name}</span>
-                  <span className="text-slate-400 font-mono">{dept.targeted} ciblés</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/50">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Taux de clic :</span>
-                    <strong className="text-red-400 font-mono">{dept.clickRate}%</strong>
+          {campaign.departments.length === 0 ? (
+            <p className="text-sm text-kori-muted">Aucune donnée par département pour cette campagne.</p>
+          ) : (
+            <ul className="divide-y divide-kori-line">
+              {campaign.departments.map((dept) => (
+                <li key={dept.name} className="py-3.5 first:pt-0 last:pb-0 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-kori-text">{dept.name}</span>
+                    <span className="text-kori-muted">{dept.targeted} ciblés</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Signalements :</span>
-                    <strong className="text-emerald-400 font-mono">{dept.reportRate}%</strong>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-kori-muted">Taux de clic</span>
+                      <strong className="font-semibold text-kori-negative">{dept.clickRate}%</strong>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-kori-muted">Signalements</span>
+                      <strong className="font-semibold text-kori-positive">{dept.reportRate}%</strong>
+                    </div>
                   </div>
-                </div>
 
-                {/* Progress bar visual */}
-                <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden flex">
                   <div
-                    className="bg-red-500 h-full"
-                    style={{ width: `${dept.clickRate}%` }}
-                    title={`Clics: ${dept.clickRate}%`}
-                  />
-                  <div
-                    className="bg-emerald-500 h-full"
-                    style={{ width: `${dept.reportRate}%` }}
-                    title={`Signalés: ${dept.reportRate}%`}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                    className="w-full h-1.5 rounded-full bg-kori-chip overflow-hidden flex"
+                    role="img"
+                    aria-label={`Clics ${dept.clickRate}%, signalements ${dept.reportRate}%`}
+                  >
+                    <div className="bg-kori-negative h-full" style={{ width: `${clampPct(dept.clickRate)}%` }} />
+                    <div className="bg-kori-positive h-full" style={{ width: `${clampPct(dept.reportRate)}%` }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-        {/* Right column (7 cols): AI Cyber Coach */}
-        <div className="lg:col-span-7 p-6 rounded-xl border border-slate-800 bg-[#0d131f] space-y-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-800/70 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-              </div>
+        <section className="lg:col-span-7 vigilo-card p-6 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-5 h-5 text-kori-muted shrink-0" />
               <div>
-                <h3 className="text-sm font-bold text-white">Vigilo Cyber Coach</h3>
-                <p className="text-[11px] text-slate-400">Analyse agrégée & Remédiation pédagogique</p>
+                <h3 className="text-base font-semibold text-kori-text">Vigilo Cyber Coach</h3>
+                <p className="text-xs text-kori-muted">Analyse agrégée &amp; remédiation pédagogique</p>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={handleRequestAiAnalysis}
-              disabled={isAnalyzing || campaign.status === 'brouillon' || campaign.delivered === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-medium cursor-pointer disabled:opacity-50 transition-all"
+              disabled={analysisBlocked}
+              className="vigilo-btn-secondary flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-              <span>{campaign.aiAnalysis ? 'Réanalyser avec l IA' : 'Demander analyse IA'}</span>
+              <span>{campaign.aiAnalysis ? 'Réanalyser avec l’IA' : 'Demander analyse IA'}</span>
             </button>
           </div>
 
           {analysisError && (
-            <p role="alert" className="rounded-lg border border-red-500/40 bg-red-950/30 px-3 py-2 text-xs text-red-200">
+            <p
+              role="alert"
+              className="rounded-xl border border-kori-negative/40 bg-kori-negative/10 px-3.5 py-2.5 text-sm text-kori-negative"
+            >
               {analysisError}
             </p>
           )}
 
           {campaign.aiAnalysis ? (
-            <div className="space-y-4 text-xs">
-              {/* Executive Summary */}
-              <div className="p-3.5 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-slate-200">Synthèse d analyse comportementale</span>
+            <div className="divide-y divide-kori-line text-sm">
+              <div className="pb-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-kori-text">Synthèse d’analyse comportementale</span>
                   <span
-                    className={`font-mono text-[10px] px-2 py-0.5 rounded border ${
+                    className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full ${
                       campaign.aiAnalysis.riskLevel === 'Critique' || campaign.aiAnalysis.riskLevel === 'Élevé'
-                        ? 'bg-red-950/80 text-red-300 border-red-800/60'
-                        : 'bg-amber-950/80 text-amber-300 border-amber-800/60'
+                        ? 'bg-kori-negative/15 text-kori-negative'
+                        : 'bg-kori-chip text-kori-muted'
                     }`}
                   >
                     Risque : {campaign.aiAnalysis.riskLevel}
                   </span>
                 </div>
-                <p className="text-slate-300 leading-relaxed">
-                  {campaign.aiAnalysis.executiveSummary}
-                </p>
+                <p className="text-kori-muted leading-relaxed">{campaign.aiAnalysis.executiveSummary}</p>
                 {campaign.aiAnalysis.warning && (
-                  <p role="status" className="text-amber-300">{campaign.aiAnalysis.warning}</p>
+                  <p role="status" className="text-kori-text flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-kori-negative" />
+                    <span>{campaign.aiAnalysis.warning}</span>
+                  </p>
                 )}
               </div>
 
-              {/* Vulnerability Factor */}
-              <div className="p-3.5 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1.5">
-                <div className="font-semibold text-amber-300 flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+              <div className="py-4 space-y-2">
+                <div className="font-semibold text-kori-text flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-kori-muted" />
                   <span>Facteur de vulnérabilité identifié</span>
                 </div>
-                <p className="text-slate-300 leading-relaxed">
-                  {campaign.aiAnalysis.vulnerabilityFactor}
-                </p>
+                <p className="text-kori-muted leading-relaxed">{campaign.aiAnalysis.vulnerabilityFactor}</p>
               </div>
 
-              {/* Operational Recommendations */}
-              <div className="p-3.5 rounded-lg bg-slate-900/80 border border-slate-800 space-y-2">
-                <div className="font-semibold text-slate-200">Recommandations managériales :</div>
-                <ul className="space-y-1.5 text-slate-300">
+              <div className="py-4 space-y-2">
+                <div className="font-semibold text-kori-text">Recommandations managériales</div>
+                <ul className="space-y-1.5 text-kori-muted">
                   {campaign.aiAnalysis.recommendations.map((rec, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                    <li key={i} className="flex items-start gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-kori-muted mt-2 shrink-0" aria-hidden="true" />
                       <span>{rec}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* Remediation Advice & CTA */}
-              <div className="p-4 rounded-lg bg-blue-950/40 border border-blue-900/60 space-y-3">
-                <div className="text-blue-300 font-semibold flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-blue-400" />
-                  <span>Remédiation recommandée par {campaign.aiAnalysis.engine || 'le coach IA'} :</span>
+              <div className="pt-4 space-y-2">
+                <div className="font-semibold text-kori-text flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-kori-muted" />
+                  <span>Remédiation recommandée par {campaign.aiAnalysis.engine || 'le coach IA'}</span>
                 </div>
-                <p className="text-slate-200 leading-relaxed">
-                  {campaign.aiAnalysis.trainingAdvice}
-                </p>
+                <p className="text-kori-muted leading-relaxed">{campaign.aiAnalysis.trainingAdvice}</p>
               </div>
             </div>
           ) : (
-            <div className="p-8 text-center rounded-lg bg-slate-900/40 border border-dashed border-slate-800 space-y-3">
-              <Sparkles className="w-8 h-8 text-slate-600 mx-auto" />
-              <div className="text-sm font-medium text-slate-300">Aucune analyse IA effectuée</div>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                {campaign.delivered > 0
+            <div className="p-8 text-center rounded-2xl border border-dashed border-kori-line space-y-3">
+              <Sparkles className="w-7 h-7 text-kori-muted mx-auto" />
+              <div className="text-sm font-semibold text-kori-text">Aucune analyse IA effectuée</div>
+              <p className="text-xs text-kori-muted max-w-sm mx-auto">
+                {hasResults
                   ? 'Demandez une analyse agrégée pour obtenir des recommandations pédagogiques.'
                   : 'Une analyse ne sera possible qu’après la collecte de données réelles et autorisées.'}
               </p>
               <button
+                type="button"
                 onClick={handleRequestAiAnalysis}
-                disabled={isAnalyzing || campaign.status === 'brouillon' || campaign.delivered === 0}
-                className="mt-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition-colors cursor-pointer"
+                disabled={analysisBlocked}
+                className="vigilo-btn-orange mt-1 px-4 py-2 text-xs cursor-pointer"
               >
                 {isAnalyzing
                   ? 'Analyse en cours...'
-                  : campaign.delivered > 0
+                  : hasResults
                     ? 'Lancer l’analyse IA'
                     : 'En attente de données mesurées'}
               </button>
             </div>
           )}
-        </div>
+        </section>
       </div>
 
-      {/* Launch Campaign Modal */}
+      {/* Fenêtre : lancer la campagne */}
       {showLaunchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#f2620a]/20 border border-[#f2620a]/40 flex items-center justify-center text-[#fb923c]">
-                <Play className="w-5 h-5 fill-[#f2620a]" />
-              </div>
-              <div>
-                <h3 className="font-bold text-white text-base">Lancer la campagne</h3>
-                <p className="text-xs text-slate-400 truncate max-w-xs">{campaign.name}</p>
-              </div>
-            </div>
+        <ModalShell
+          title="Lancer la campagne"
+          subtitle={campaign.name}
+          onClose={() => setShowLaunchModal(false)}
+          busy={isLaunching}
+        >
+          <p className="text-sm text-kori-muted leading-relaxed">
+            La campagne va être déployée auprès de{' '}
+            <strong className="text-kori-text">{campaign.targeted} collaborateur(s)</strong> ciblés.
+          </p>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              La campagne va être déployée auprès de <strong>{campaign.targeted} collaborateur(s)</strong> ciblés.
-            </p>
-
-            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={launchWithRealEmails}
-                onChange={(e) => setLaunchWithRealEmails(e.target.checked)}
-                className="mt-0.5 rounded accent-[#f2620a]"
-              />
-              <div className="text-xs text-slate-200">
-                <span className="font-semibold text-white">Envoyer par email réel aux collaborateurs (SMTP)</span>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Si activé, chaque destinataire recevra le courriel d&apos;ingénierie sociale avec lien piège VIGILO dans sa boîte.
-                </p>
-              </div>
-            </label>
-
-            {launchError && (
-              <p className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-lg border border-rose-500/30">
-                {launchError}
+          <label className="flex items-start gap-3 p-3.5 rounded-xl border border-kori-line bg-kori-input cursor-pointer">
+            <input
+              type="checkbox"
+              checked={launchWithRealEmails}
+              onChange={(e) => setLaunchWithRealEmails(e.target.checked)}
+              className="mt-0.5 accent-kori-accent"
+            />
+            <div className="text-sm">
+              <span className="font-semibold text-kori-text">Envoyer par email réel aux collaborateurs (SMTP)</span>
+              <p className="text-xs text-kori-muted mt-1">
+                Si activé, chaque destinataire recevra le courriel d&apos;ingénierie sociale avec lien piège VIGILO dans sa boîte.
               </p>
-            )}
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowLaunchModal(false)}
-                className="vigilo-btn-secondary px-4 py-2 rounded-lg text-xs cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmLaunch}
-                disabled={isLaunching}
-                className="vigilo-btn-orange px-4 py-2 rounded-lg text-xs font-bold text-white flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-lg"
-              >
-                <Play className="w-3.5 h-3.5 fill-white" />
-                <span>{isLaunching ? 'Lancement en cours…' : 'Confirmer et Lancer'}</span>
-              </button>
             </div>
+          </label>
+
+          {launchError && (
+            <p
+              role="alert"
+              className="text-sm text-kori-negative bg-kori-negative/10 p-3 rounded-xl border border-kori-negative/40"
+            >
+              {launchError}
+            </p>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setShowLaunchModal(false)}
+              disabled={isLaunching}
+              className="vigilo-btn-secondary px-4 py-2 text-xs cursor-pointer disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmLaunch}
+              disabled={isLaunching}
+              className="vigilo-btn-orange px-4 py-2 text-xs flex items-center gap-2 cursor-pointer"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>{isLaunching ? 'Lancement en cours…' : 'Confirmer et lancer'}</span>
+            </button>
           </div>
-        </div>
+        </ModalShell>
+      )}
+
+      {/* Fenêtre : clôturer la campagne (remplace window.confirm) */}
+      {showCompleteModal && (
+        <ModalShell
+          title="Clôturer la campagne ?"
+          subtitle={campaign.name}
+          onClose={() => setShowCompleteModal(false)}
+          busy={isCompleting}
+        >
+          <p className="text-sm text-kori-muted leading-relaxed">
+            Elle sera marquée comme terminée et disponible pour l’analyse IA et le re-test.
+          </p>
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setShowCompleteModal(false)}
+              disabled={isCompleting}
+              className="vigilo-btn-secondary px-4 py-2 text-xs cursor-pointer disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmComplete}
+              disabled={isCompleting}
+              className="vigilo-btn-orange px-4 py-2 text-xs cursor-pointer"
+            >
+              {isCompleting ? 'Clôture en cours…' : 'Clôturer la campagne'}
+            </button>
+          </div>
+        </ModalShell>
       )}
     </div>
   );

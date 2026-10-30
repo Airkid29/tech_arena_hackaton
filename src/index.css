@@ -1,60 +1,112 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+/*
+ * KORI design system — fondations (lot 1)
+ * Source : tokens.md. Thème piloté par [data-theme="light" | "dark"] sur <html>.
+ * La classe .dark est conservée en parallèle tant que les composants utilisent encore `dark:`.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", "DM Sans", sans-serif;
+  --color-kori-bg: var(--kori-bg);
+  --color-kori-surface: var(--kori-surface);
+  --color-kori-sidebar: var(--kori-sidebar);
+  --color-kori-header: var(--kori-header);
+  --color-kori-input: var(--kori-input);
+  --color-kori-text: var(--kori-text);
+  --color-kori-muted: var(--kori-muted);
+  --color-kori-line: var(--kori-line);
+  --color-kori-hover: var(--kori-hover);
+  --color-kori-chip: var(--kori-chip);
+  --color-kori-nav: var(--kori-nav);
+  --color-kori-accent: var(--kori-accent);
+  --color-kori-ink: var(--kori-ink);
+  --color-kori-positive: var(--kori-positive);
+  --color-kori-negative: var(--kori-negative);
+  --color-kori-grid: var(--kori-grid);
+}
+
+:root {
+  color-scheme: dark;
+  --kori-bg: #101310;
+  --kori-surface: #1d241e;
+  --kori-sidebar: #1d241e;
+  --kori-header: #161c18;
+  --kori-input: #101310;
+  --kori-text: #f4f3ed;
+  --kori-muted: #9aa396;
+  --kori-line: rgb(244 243 237 / 0.1);
+  --kori-hover: rgb(255 255 255 / 0.06);
+  --kori-chip: rgb(255 255 255 / 0.08);
+  --kori-nav: rgb(255 255 255 / 0.42);
+  --kori-accent: #c7f36b;
+  --kori-ink: #101310;
+  --kori-positive: #c7f36b;
+  --kori-negative: #f87171;
+  --kori-grid: rgb(244 243 237 / 0.08);
+  --kori-scroll: #2b352d;
+  --kori-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.25);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --kori-bg: #f4f3ed;
+  --kori-surface: #ffffff;
+  --kori-sidebar: #ecebe4;
+  --kori-header: #f0efe8;
+  --kori-input: #f4f3ed;
+  --kori-text: #141914;
+  --kori-muted: #5c665f;
+  --kori-line: rgb(20 25 20 / 0.1);
+  --kori-hover: rgb(20 25 20 / 0.05);
+  --kori-chip: rgb(20 25 20 / 0.06);
+  --kori-nav: rgb(20 25 20 / 0.45);
+  --kori-accent: #c7f36b;
+  --kori-ink: #101310;
+  --kori-positive: #3f6e12;
+  --kori-negative: #c2410c;
+  --kori-grid: rgb(20 25 20 / 0.1);
+  --kori-scroll: #c9cdc4;
+  --kori-shadow: 0 1px 2px rgb(20 25 20 / 0.05), 0 8px 24px rgb(20 25 20 / 0.06);
+}
+
+/*
+ * Pont de compatibilité : les composants existants utilisent encore les variables
+ * historiques (--background, --card, --primary…). On les alimente avec les tokens KORI
+ * pour que toute l'interface adopte la nouvelle identité sans toucher aux composants.
+ * Ces alias seront supprimés quand les derniers composants auront migré vers bg-kori-*.
+ */
+:root {
+  --background: var(--kori-bg);
+  --foreground: var(--kori-text);
+  --card: var(--kori-surface);
+  --card-border: var(--kori-line);
+  --primary: var(--kori-accent);
+  --primary-hover: color-mix(in srgb, var(--kori-accent) 88%, var(--kori-ink));
+  --muted: var(--kori-chip);
+  --muted-foreground: var(--kori-muted);
+  --accent: var(--kori-hover);
+  --surface-inset: var(--kori-input);
+  --surface-toolbar: var(--kori-header);
+  --sidebar-bg: var(--kori-sidebar);
+  --sidebar-fg: var(--kori-text);
+  --sidebar-muted: var(--kori-nav);
+  --success: var(--kori-positive);
+  --success-bright: var(--kori-positive);
+  --danger-bright: var(--kori-negative);
+  --info-bright: var(--kori-muted);
+  --shadow-card: var(--kori-shadow);
+  --shadow-card-hover: var(--kori-shadow);
+}
 
 @layer base {
-  :root {
-    color-scheme: light;
-    --background: #f4f6f9;
-    --foreground: #0c1222;
-    --card: #ffffff;
-    --card-border: #c5cdd8;
-    --primary: #c2410c;
-    --primary-hover: #9a3412;
-    --muted: #e8edf3;
-    --muted-foreground: #3d4a5c;
-    --accent: #dce3ec;
-    --surface-inset: #eef2f7;
-    --surface-toolbar: #ffffff;
-    --sidebar-bg: #ffffff;
-    --sidebar-fg: #1e293b;
-    --sidebar-muted: #475569;
-    --success: #047857;
-    --success-bright: #059669;
-    --danger-bright: #dc2626;
-    --info-bright: #2563eb;
-    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 16px rgba(15, 23, 42, 0.06);
-    --shadow-card-hover: 0 4px 24px rgba(15, 23, 42, 0.12);
-  }
-
-  .dark {
-    color-scheme: dark;
-    --background: #000000;
-    --foreground: #ededed;
-    --card: #0a0a0a;
-    --card-border: rgba(255, 255, 255, 0.12);
-    --primary: #f2620a;
-    --primary-hover: #d95809;
-    --muted: #171717;
-    --muted-foreground: #a1a1aa;
-    --accent: #171717;
-    --surface-inset: rgba(255, 255, 255, 0.03);
-    --surface-toolbar: rgba(15, 23, 42, 0.8);
-    --sidebar-bg: #0a0a0a;
-    --sidebar-fg: #e2e8f0;
-    --sidebar-muted: #94a3b8;
-    --success: #34d399;
-    --success-bright: #34d399;
-    --danger-bright: #fb7185;
-    --info-bright: #60a5fa;
-    --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
-    --shadow-card-hover: 0 8px 30px rgba(0, 0, 0, 0.5);
-  }
-
   body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    background-color: var(--kori-bg);
+    color: var(--kori-text);
+    font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.2s ease, color 0.2s ease;
@@ -62,261 +114,197 @@
   }
 }
 
-/* Premium minimalist grid */
-.vigilo-grid-pattern {
-  background-image:
-    linear-gradient(to right, rgba(15, 23, 42, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: radial-gradient(circle at center, black, transparent 80%);
-  -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
-}
-
-.dark .vigilo-grid-pattern {
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-}
-
-.vigilo-orange-glow {
-  background: radial-gradient(circle, rgba(234, 88, 12, 0.12) 0%, transparent 60%);
-}
-
-.dark .vigilo-orange-glow {
-  background: radial-gradient(circle, rgba(242, 98, 10, 0.08) 0%, transparent 60%);
-}
-
+/* Décor retiré (pas de dégradés ni de glow) : les classes restent pour ne pas casser le JSX existant */
+.vigilo-grid-pattern,
+.vigilo-orange-glow,
 .vigilo-cyan-glow {
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 60%);
+  background: none;
+  mask-image: none;
+  -webkit-mask-image: none;
 }
 
-.dark .vigilo-cyan-glow {
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, transparent 60%);
-}
-
+/* Surfaces */
 .vigilo-card {
-  background-color: var(--card);
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: var(--kori-surface);
+  border: 1px solid var(--kori-line);
+  border-radius: 16px;
+  box-shadow: var(--kori-shadow);
+  transition: border-color 0.2s ease;
 }
 
 .vigilo-card:hover {
-  border-color: var(--card-border);
-}
-
-.dark .vigilo-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--kori-chip);
 }
 
 .vigilo-card-interactive {
-  background-color: var(--card);
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
+  background-color: var(--kori-surface);
+  border: 1px solid var(--kori-line);
+  border-radius: 16px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .vigilo-card-interactive:hover {
-  border-color: var(--primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card-hover);
+  border-color: var(--kori-accent);
 }
 
-.vigilo-btn-primary {
-  background-color: var(--foreground);
-  color: var(--background);
-  font-weight: 500;
-  border-radius: 8px;
-  transition: transform 0.1s ease, opacity 0.2s ease;
-}
-
-.vigilo-btn-primary:hover {
-  opacity: 0.92;
-  transform: scale(0.98);
-}
-
+/* Boutons : lime réservé à l'action principale */
+.vigilo-btn-primary,
 .vigilo-btn-orange {
-  background-color: var(--primary);
-  color: #ffffff;
-  font-weight: 500;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(234, 88, 12, 0.25);
-  transition: all 0.2s ease;
+  background-color: var(--kori-accent);
+  color: var(--kori-ink);
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: opacity 0.2s ease;
 }
 
+.vigilo-btn-primary:hover,
 .vigilo-btn-orange:hover {
-  background-color: var(--primary-hover);
-  box-shadow: 0 4px 15px rgba(234, 88, 12, 0.35);
-  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+.vigilo-btn-primary:disabled,
+.vigilo-btn-orange:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .vigilo-btn-secondary {
   background-color: transparent;
-  border: 1px solid var(--card-border);
-  color: var(--foreground);
+  border: 1px solid var(--kori-line);
+  color: var(--kori-text);
   font-weight: 500;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
 }
 
 .vigilo-btn-secondary:hover {
-  background-color: var(--muted);
-  border-color: var(--card-border);
+  background-color: var(--kori-hover);
 }
 
-.dark .vigilo-btn-secondary:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
+/* Pills */
 .vigilo-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
   padding: 0.25rem 0.625rem;
   border-radius: 9999px;
-  background-color: var(--muted);
-  border: 1px solid var(--card-border);
+  background-color: var(--kori-chip);
+  border: 1px solid var(--kori-line);
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--muted-foreground);
+  color: var(--kori-muted);
 }
 
-.vigilo-pill-orange {
-  background-color: rgba(234, 88, 12, 0.12);
-  border: 1px solid rgba(234, 88, 12, 0.28);
-  color: var(--primary);
-}
-
-.dark .vigilo-pill-orange {
-  background-color: rgba(242, 98, 10, 0.1);
-  border: 1px solid rgba(242, 98, 10, 0.2);
-  color: #fb923c;
-}
-
+.vigilo-pill-orange,
 .vigilo-pill-emerald {
-  background-color: rgba(5, 150, 105, 0.12);
-  border: 1px solid rgba(5, 150, 105, 0.28);
-  color: var(--success);
-}
-
-.dark .vigilo-pill-emerald {
-  background-color: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  color: #34d399;
+  background-color: color-mix(in srgb, var(--kori-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--kori-accent) 35%, transparent);
+  color: var(--kori-positive);
 }
 
 .vigilo-pill-cyan {
-  background-color: rgba(37, 99, 235, 0.1);
-  border: 1px solid rgba(37, 99, 235, 0.25);
-  color: #1d4ed8;
+  background-color: var(--kori-chip);
+  border-color: var(--kori-line);
+  color: var(--kori-muted);
 }
 
-.dark .vigilo-pill-cyan {
-  background-color: rgba(6, 182, 212, 0.1);
-  border: 1px solid rgba(6, 182, 212, 0.2);
-  color: #38bdf8;
-}
-
-/* Semantic console surfaces (theme-aware) */
+/* Surfaces sémantiques de la console */
 .vigilo-page-title {
-  color: var(--foreground);
+  color: var(--kori-text);
   font-weight: 700;
 }
 
 .vigilo-text-muted {
-  color: var(--muted-foreground);
+  color: var(--kori-muted);
 }
 
 .vigilo-toolbar {
-  background-color: var(--surface-toolbar);
-  border: 1px solid var(--card-border);
-  backdrop-filter: blur(12px);
-}
-
-.dark .vigilo-toolbar {
-  background-color: rgba(15, 23, 42, 0.8);
+  background-color: var(--kori-header);
+  border: 1px solid var(--kori-line);
 }
 
 .vigilo-inset {
-  background-color: var(--surface-inset);
-  border: 1px solid var(--card-border);
+  background-color: var(--kori-input);
+  border: 1px solid var(--kori-line);
 }
 
 .vigilo-divider {
-  border-color: var(--card-border);
+  border-color: var(--kori-line);
 }
 
 .vigilo-chrome-btn {
-  border: 1px solid var(--card-border);
-  background-color: var(--muted);
-  color: var(--muted-foreground);
+  border: 1px solid var(--kori-line);
+  background-color: var(--kori-chip);
+  color: var(--kori-muted);
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .vigilo-chrome-btn:hover {
-  color: var(--foreground);
-  background-color: var(--accent);
-}
-
-.dark .vigilo-chrome-btn {
-  border-color: rgba(255, 255, 255, 0.1);
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.dark .vigilo-chrome-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  color: var(--kori-text);
+  background-color: var(--kori-hover);
 }
 
 .vigilo-input {
-  background-color: var(--card);
-  border: 1px solid var(--card-border);
-  color: var(--foreground);
+  background-color: var(--kori-input);
+  border: 1px solid var(--kori-line);
+  color: var(--kori-text);
 }
 
 .vigilo-input::placeholder {
-  color: var(--muted-foreground);
+  color: var(--kori-muted);
   opacity: 0.75;
 }
 
 .vigilo-input:focus {
   outline: none;
-  border-color: var(--primary);
-}
-
-.dark .vigilo-input {
-  background-color: rgba(2, 6, 23, 0.8);
+  border-color: var(--kori-accent);
 }
 
 .vigilo-glow-text {
-  color: var(--foreground);
-}
-
-.dark .vigilo-glow-text {
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  color: var(--kori-text);
 }
 
 .vigilo-orange-text-gradient {
-  color: var(--primary);
+  color: var(--kori-positive);
 }
 
 .vigilo-stat-accent-emerald {
-  color: var(--success-bright);
+  color: var(--kori-positive);
 }
 
 .vigilo-stat-accent-rose {
-  color: var(--danger-bright);
+  color: var(--kori-negative);
 }
 
 .vigilo-stat-accent-blue {
-  color: var(--info-bright);
+  color: var(--kori-muted);
 }
 
-/* Modals & forms: always use semantic tokens (no global text remap) */
+/*
+ * Lime (--primary) : le texte lime est illisible sur fond clair, et un texte blanc est
+ * illisible sur un fond lime. Ces deux règles corrigent les ~60 usages existants de
+ * text-[var(--primary)] / bg-[var(--primary)] en attendant leur migration.
+ */
+:root[data-theme="light"] .text-\[var\(--primary\)\],
+:root[data-theme="light"] .group:hover .group-hover\:text-\[var\(--primary\)\] {
+  color: var(--kori-positive);
+}
+
+.bg-\[var\(--primary\)\].text-white,
+.bg-\[var\(--primary\)\] .text-white {
+  color: var(--kori-ink);
+}
+
+/* Titres et métriques en Syne */
+.font-display {
+  font-family: "Syne", "DM Sans", sans-serif;
+  font-weight: 800;
+}
+
+/* Modales et formulaires */
 [data-vigilo-modal] {
-  color: var(--foreground);
+  color: var(--kori-text);
 }
 
 [data-vigilo-theme='light'] [data-vigilo-modal] .text-white {
@@ -324,26 +312,26 @@
 }
 
 [data-vigilo-theme='light'] [data-vigilo-modal] select option {
-  background-color: var(--card);
-  color: var(--foreground);
+  background-color: var(--kori-surface);
+  color: var(--kori-text);
 }
 
-/* Light mode: fix legacy dark-only Tailwind across console (not inside data-vigilo-modal) */
+/*
+ * Pont thème clair : corrige les classes Tailwind « sombres » héritées (text-white, slate-*, etc.).
+ * Temporaire : à supprimer quand CampaignDetail, FlashNewsView, EmployeeSimulatorModal… auront migré.
+ */
 [data-vigilo-theme='light'] :not([data-vigilo-modal]) .text-white {
-  color: var(--foreground);
+  color: var(--kori-text);
 }
 
 [data-vigilo-theme='light'] .text-slate-200,
-[data-vigilo-theme='light'] .text-slate-300 {
-  color: var(--muted-foreground);
-}
-
+[data-vigilo-theme='light'] .text-slate-300,
 [data-vigilo-theme='light'] .text-slate-400 {
-  color: var(--muted-foreground);
+  color: var(--kori-muted);
 }
 
 [data-vigilo-theme='light'] .text-emerald-400 {
-  color: var(--success);
+  color: var(--kori-positive);
 }
 
 [data-vigilo-theme='light'] .text-amber-400 {
@@ -351,38 +339,36 @@
 }
 
 [data-vigilo-theme='light'] .text-rose-400 {
-  color: #b91c1c;
+  color: var(--kori-negative);
 }
 
 [data-vigilo-theme='light'] .text-blue-400 {
-  color: #1d4ed8;
+  color: var(--kori-muted);
 }
 
 [data-vigilo-theme='light'] .border-white\/10,
 [data-vigilo-theme='light'] .border-white\/15 {
-  border-color: var(--card-border);
+  border-color: var(--kori-line);
 }
 
 [data-vigilo-theme='light'] .bg-slate-900,
 [data-vigilo-theme='light'] .bg-slate-900\/80,
 [data-vigilo-theme='light'] .bg-slate-900\/90 {
-  background-color: var(--muted);
+  background-color: var(--kori-chip);
 }
 
 [data-vigilo-theme='light'] .bg-slate-950,
 [data-vigilo-theme='light'] .bg-slate-950\/60,
 [data-vigilo-theme='light'] .bg-slate-950\/80 {
-  background-color: var(--surface-inset);
+  background-color: var(--kori-input);
 }
 
 [data-vigilo-theme='light'] .bg-white\/5,
 [data-vigilo-theme='light'] .bg-white\/\[0\.02\],
 [data-vigilo-theme='light'] .bg-white\/\[0\.03\] {
-  background-color: var(--surface-inset);
+  background-color: var(--kori-input);
 }
 
-[data-vigilo-theme='light'] .vigilo-btn-orange,
-[data-vigilo-theme='light'] button.vigilo-btn-orange,
 [data-vigilo-theme='light'] button.bg-emerald-600,
 [data-vigilo-theme='light'] button.bg-emerald-500,
 [data-vigilo-theme='light'] button.bg-blue-600,
@@ -392,13 +378,8 @@
   color: #ffffff !important;
 }
 
-/* Primary-filled controls (lang switcher, etc.) keep white label */
-[data-vigilo-theme='light'] button.bg-\[var\(--primary\)\] {
-  color: #ffffff !important;
-}
-
 [data-vigilo-theme='light'] .hover\:text-white:hover {
-  color: var(--foreground);
+  color: var(--kori-text);
 }
 
 /* Simulateur : pas de remapping global text-white (styles dédiés via isDark) */
@@ -419,11 +400,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--card-border);
+  background: var(--kori-scroll);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
+  background: var(--kori-muted);
 }
 
 @keyframes pulse-slow {

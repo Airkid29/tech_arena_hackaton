@@ -74,7 +74,8 @@ export default function App() {
     return (localStorage.getItem('vigilo_lang') as Language) || 'fr';
   });
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('vigilo_theme') as 'dark' | 'light') || 'dark';
+    const stored = localStorage.getItem('kori.theme') ?? localStorage.getItem('vigilo_theme');
+    return stored === 'light' ? 'light' : 'dark';
   });
 
   const handleToggleLanguage = (lang: Language) => {
@@ -85,11 +86,12 @@ export default function App() {
   const handleToggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    localStorage.setItem('vigilo_theme', next);
+    localStorage.setItem('kori.theme', next);
   };
 
-  // Sync dark class on root document
+  // Sync data-theme (KORI) + classe .dark (compatibilité des variantes `dark:`) sur <html>
   useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -786,6 +788,7 @@ export default function App() {
           }}
           onGoToLanding={handleLogout}
           activeCampaignCount={activeCampaignCount}
+          trainingCount={trainings.length}
           language={language}
           theme={theme}
           mobileOpen={mobileNavOpen}
