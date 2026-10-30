@@ -74,9 +74,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 app.use(cookieParser());
 
-// Normalize URL in case Vercel Serverless Function rewrites strip the /api prefix
+// Normalize URL in case Vercel Serverless Function rewrites strip or alter the /api prefix
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  if (req.url && !req.url.startsWith('/api')) {
+  const matched = (req.headers['x-matched-path'] as string) || '';
+  if (matched && matched.startsWith('/api') && req.url !== matched) {
+    req.url = matched;
+  } else if (req.url && !req.url.startsWith('/api')) {
     req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`;
   }
   next();
