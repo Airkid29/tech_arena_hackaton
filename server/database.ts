@@ -20,14 +20,15 @@ export class DatabaseOperationError extends Error {
 export function getDatabase(): SupabaseClient {
   if (client) return client;
 
-  const url = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) {
+  const rawUrl = process.env.SUPABASE_URL?.trim();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!rawUrl || !serviceRoleKey) {
     throw new DatabaseConfigurationError(
       'Supabase non configuré : définir SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY côté serveur.'
     );
   }
 
+  const url = rawUrl.replace(/\/+$/, '');
   client = createClient(url, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,

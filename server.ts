@@ -74,6 +74,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 app.use(cookieParser());
 
+// Normalize URL in case Vercel Serverless Function rewrites strip the /api prefix
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (req.url && !req.url.startsWith('/api')) {
+    req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`;
+  }
+  next();
+});
+
 function createRateLimiter(limit: number, windowMs: number, keyPrefix: string) {
   const entries = new Map<string, { count: number; resetAt: number }>();
   return (req: Request, res: Response, next: NextFunction) => {
@@ -145,8 +153,18 @@ app.use('/api', (req, res, next) => {
     }
     const host = req.get('host');
     const forwardedHost = req.get('x-forwarded-host');
-    if (originHost && originHost !== host && originHost !== forwardedHost) {
-      const isAllowedHost = originHost.endsWith('.vercel.app') || originHost.includes('localhost') || originHost.includes('127.0.0.1');
+    let appUrlHost: string | null = null;
+    if (process.env.APP_URL) {
+      try {
+        appUrlHost = new URL(process.env.APP_URL).host;
+      } catch {}
+    }
+    if (originHost && originHost !== host && originHost !== forwardedHost && originHost !== appUrlHost) {
+      const isAllowedHost =
+        originHost.endsWith('.vercel.app') ||
+        originHost.includes('localhost') ||
+        originHost.includes('127.0.0.1') ||
+        (appUrlHost && originHost === appUrlHost);
       if (!isAllowedHost) {
         res.status(403).json({ success: false, error: 'Origine de requête invalide' });
         return;
